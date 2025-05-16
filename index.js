@@ -22,7 +22,7 @@ import nocache from "nocache";
 //   standardHeaders: true,
 //   legacyHeaders: false,
 // });
-import { startSocket } from "./socket/socket.js";
+// import { startSocket } from "./socket/socket.js";
 
 import connectDB from "./database/index.js";
 
@@ -63,7 +63,7 @@ app.use(
   })
 );
 
-startSocket(server);
+// startSocket(server);
 
 app.use("/webApp", webAppRouter);
 app.use("/", crmRouter);
