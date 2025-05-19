@@ -6,7 +6,7 @@ export const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET;
 export const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
 export const AUTH_OTP_MESSAGE = process.env.AUTH_OTP_MESSAGE ?? null;
 export const BODY_SIZE_LIMIT = process.env.BODY_SIZE_LIMIT ?? "1mb";
-export const OTP_SECRET_KEY = process.env.OTP_SECRET_KEY ?? "f2145997f29de";
+export const OTP_SECRET_KEY = process.env.OTP_SECRET_KEY ?? "SRV CRM: Template";
 export const ACCESS_TOKEN_JWT_EXPIRE = process.env.ACCESS_TOKEN_JWT_EXPIRE ?? "15m";
 export const ACCESS_TOKEN_RES_EXPIRE = process.env.ACCESS_TOKEN_RES_EXPIRE ?? 900000;
 export const REFRESH_TOKEN_RES_EXPIRE = process.env.REFRESH_TOKEN_RES_EXPIRE ?? 2592000000;
@@ -96,8 +96,6 @@ export const COLLECTIONS = {
   BILLING_TESTS: "billing_tests",
   REMARKS: "remarks",
 };
-
-
 
 export const PRIVILEGES = {
   ADMIN: "67ca826f9ebbcf241e60d459",

@@ -14,6 +14,8 @@ import * as controller from "../controllers/auth.controller.js";
 router.use(loginLimiter);
 router.post("/login", controller.login("web"));
 
+router.post("/two-step", controller.verifyTwoFactor);
+
 router.use(auth({ common: true }));
 router.post("/check-allowed", controller.allowed);
 router.post("/logout", controller.logout);

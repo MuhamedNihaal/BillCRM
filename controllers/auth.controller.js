@@ -13,7 +13,9 @@ import { COLLECTIONS } from "../config.js";
 import { decodeAndEncode } from "../helper/functions.js";
 
 const secret = speakeasy.generateSecret({
-  name: OTP_SECRET_KEY,
+  // name: OTP_SECRET_KEY,
+  // name: OTP_SECRET_KEY,
+  name: "Template - CRM",
 });
 
 const placeHolderReplacer = (message, otp) => {
@@ -141,7 +143,7 @@ export const login = (platform) => {
         sameSite: "none",
       });
 
-      return new Response("Login successful", { data: user, refreshToken }, 200);
+      return new Response("Login successful", { data: decodeAndEncode(user), refreshToken }, 200);
     } else {
       throw new Error("Invalid platform", 400);
     }
@@ -505,6 +507,41 @@ export const logout = asyncErrorHandler(async (req, res) => {
   res.cookie("token", "", { expires: new Date(0) });
   res.clearCookie("token");
   return res.status(200).json({ message: "logout successful" });
+});
+
+export const verifyTwoFactor = asyncErrorHandler(async (req) => {
+  const secret = req?.user?.twoFactor?.secret;
+
+  const { token } = req.body;
+
+  if (isNull(token)) throw new Error("Please enter a otp", 400);
+
+  const verified = speakeasy.totp.verify({
+    secret: secret,
+    encoding: "ascii",
+    token,
+  });
+
+  //? update last used token , timestamp and clearing qrCode
+  if (verified) {
+    await models.User.updateOne(
+      { _id: req.user._id },
+      {
+        $set: {
+          "twoFactor.used": true,
+          "twoFactor.lastUsedOTP": token,
+          "twoFactor.lastUsed": moment().format(),
+        },
+        $unset: {
+          "twoFactor.qrCode": "",
+        },
+      }
+    );
+  }
+
+  const data = encrypt({ verified });
+
+  return new Response(null, { data }, 200);
 });
 
 export default app;
