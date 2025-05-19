@@ -539,7 +539,7 @@ export const verifyTwoFactor = asyncErrorHandler(async (req) => {
     );
   }
 
-  const data = encrypt({ verified });
+  const data = decodeAndEncode({ verified });
 
   return new Response(null, { data }, 200);
 });

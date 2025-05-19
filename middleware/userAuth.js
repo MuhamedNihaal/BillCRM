@@ -72,7 +72,7 @@ const UserAuth = (
         delete user.date;
         delete user.time;
         delete user.__v;
-        delete user?.twoFactor?.secret;
+        // delete user?.twoFactor?.secret;
         delete user?.twoFactor?.lastUsedOTP;
 
         const accessToken = jwt.sign({ _id: user._id }, ACCESS_TOKEN_SECRET, {
@@ -100,7 +100,7 @@ const UserAuth = (
         delete user.date;
         delete user.time;
         delete user.__v;
-        delete user?.twoFactor?.secret;
+        // delete user?.twoFactor?.secret;
         delete user?.twoFactor?.lastUsedOTP;
 
         // checking access token and refresh token are same user
