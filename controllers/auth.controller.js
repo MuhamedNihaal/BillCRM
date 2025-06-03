@@ -160,19 +160,22 @@ export const allowed = asyncErrorHandler(async (req) => {
   if (privilegeInfo?.superAdmin) {
     modules = await models.Modules.aggregate([
       {
-        $match: {
-          status: 0,
-        },
+        $match: { status: 0 },
       },
       {
         $lookup: {
-          from: COLLECTIONS.MAIN_MENUS,
+          from: "mainMenus",
           let: { moduleId: "$_id" },
           pipeline: [
             {
               $match: {
                 $expr: {
-                  $and: [{ $eq: ["$module", "$$moduleId"] }, { $eq: ["$status", 0] }],
+                  $and: [
+                    {
+                      $eq: ["$module", "$$moduleId"],
+                    },
+                    { $eq: ["$status", 0] },
+                  ],
                 },
               },
             },
@@ -182,15 +185,19 @@ export const allowed = asyncErrorHandler(async (req) => {
       },
       {
         $lookup: {
-          from: COLLECTIONS.SUB_MENUS,
+          from: "subMenus",
           let: { mainMenuIds: "$mainMenus._id" },
           pipeline: [
             {
               $match: {
                 $expr: {
-                  $in: ["$mainMenu", "$$mainMenuIds"],
+                  $and: [
+                    {
+                      $in: ["$mainMenu", "$$mainMenuIds"],
+                    },
+                    { $eq: ["$status", 0] },
+                  ],
                 },
-                status: 0,
               },
             },
             {
@@ -200,11 +207,12 @@ export const allowed = asyncErrorHandler(async (req) => {
             },
             {
               $project: {
-                name: 1,
+                title: "$name",
                 mainMenu: 1,
-                link: 1,
+                path: 1,
                 icon: 1,
                 order: 1,
+                type: "item",
               },
             },
           ],
@@ -218,19 +226,40 @@ export const allowed = asyncErrorHandler(async (req) => {
               input: "$mainMenus",
               as: "menu",
               in: {
-                _id: "$$menu._id",
-                name: "$$menu.name",
-                icon: "$$menu.icon",
-                link: "$$menu.link",
-                order: {
-                  $ifNull: ["$$menu.order", 999],
-                },
-                subMenus: {
-                  $filter: {
-                    input: "$subMenus",
-                    as: "sub",
-                    cond: {
-                      $eq: ["$$sub.mainMenu", "$$menu._id"],
+                $let: {
+                  vars: {
+                    matchedSubMenus: {
+                      $filter: {
+                        input: "$subMenus",
+                        as: "sub",
+                        cond: {
+                          $eq: ["$$sub.mainMenu", "$$menu._id"],
+                        },
+                      },
+                    },
+                  },
+                  in: {
+                    _id: "$$menu._id",
+                    title: "$$menu.name",
+                    icon: "$$menu.icon",
+                    path: "$$menu.path",
+                    order: {
+                      $ifNull: ["$$menu.order", 999],
+                    },
+                    subMenus: "$$matchedSubMenus",
+                    type: {
+                      $cond: {
+                        if: {
+                          $gt: [
+                            {
+                              $size: "$$matchedSubMenus",
+                            },
+                            0,
+                          ],
+                        },
+                        then: "collapse",
+                        else: "item",
+                      },
                     },
                   },
                 },
@@ -251,24 +280,26 @@ export const allowed = asyncErrorHandler(async (req) => {
       },
       {
         $project: {
-          name: 1,
+          id: "$_id",
+          title: "$name",
+          path: 1,
           code: 1,
-          icon: 1,
-          order: {
-            $ifNull: ["$order", 999],
-          },
+          type: "root",
+          Icon: "$icon",
+          order: { $ifNull: ["$order", 999] },
           redirectUrl: 1,
-          mainMenus: {
+          childs: {
             $map: {
               input: "$mainMenus",
               as: "menu",
               in: {
                 _id: "$$menu._id",
-                name: "$$menu.name",
+                title: "$$menu.title",
                 icon: "$$menu.icon",
-                link: "$$menu.link",
+                path: "$$menu.path",
                 order: "$$menu.order",
-                subMenus: {
+                type: "$$menu.type",
+                childs: {
                   $sortArray: {
                     input: "$$menu.subMenus",
                     sortBy: { order: 1 },
@@ -346,9 +377,7 @@ export const allowed = asyncErrorHandler(async (req) => {
                     {
                       $in: ["$_id", "$$mainMenuIds"],
                     },
-                    {
-                      $eq: ["$module", "$$moduleId"],
-                    },
+                    { $eq: ["$module", "$$moduleId"] },
                     { $eq: ["$status", 0] },
                     { $eq: ["$masterPath", false] },
                   ],
@@ -487,13 +516,7 @@ export const allowed = asyncErrorHandler(async (req) => {
 
   let obj = decodeAndEncode({ user, modules });
 
-  return new Response(
-    "Allowed",
-    {
-      data: obj,
-    },
-    200
-  );
+  return new Response("Allowed", { data: obj }, 200);
 });
 
 export const logout = asyncErrorHandler(async (req, res) => {
