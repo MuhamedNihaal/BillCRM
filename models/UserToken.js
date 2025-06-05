@@ -9,6 +9,12 @@ const userRefreshTokenSchema = new mongoose.Schema(
       required: true,
     },
     deviceId: { type: String },
+
+    os: String,
+    platform: String,
+    deviceType: String,
+    browser: String,
+
     token: { type: String, required: true },
     blacklisted: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now, expires: "30d" },

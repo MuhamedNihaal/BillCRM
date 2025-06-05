@@ -17,6 +17,8 @@ router.post("/login", controller.login("web"));
 router.use(auth({ common: true }));
 router.post("/check-allowed", controller.allowed);
 router.post("/logout", controller.logout);
+router.get("/session", controller.listSessions);
 router.post("/two-step", controller.verifyTwoFactor);
+router.put("/change-password", controller.changePassword);
 
 export default router;

@@ -2,7 +2,7 @@ import jwt from "jsonwebtoken";
 import models from "../models/index.js";
 import { ACCESS_TOKEN_JWT_EXPIRE, ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET } from "../config.js";
 
-const generateTokens = async (user, rememberMe = false, deviceId = "") => {
+const generateTokens = async (user, rememberMe = false, deviceId = "", deviceInfo = {}) => {
   try {
     const payload = { _id: user._id, deviceId };
 
@@ -29,6 +29,10 @@ const generateTokens = async (user, rememberMe = false, deviceId = "") => {
         userId: user._id,
         token: refreshToken,
         deviceId,
+        os: deviceInfo?.os ?? null,
+        platform: deviceInfo?.platform ?? null,
+        deviceType: deviceInfo?.deviceType ?? null,
+        browser: deviceInfo?.browser ?? null,
       }).save();
     }
 
