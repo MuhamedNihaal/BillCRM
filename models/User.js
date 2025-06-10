@@ -29,10 +29,6 @@ const schema = new Schema(
     subBranch: { type: Schema.Types.ObjectId, ref: COLLECTIONS.BRANCH },
     franchise: { type: Schema.Types.ObjectId, ref: COLLECTIONS.BRANCH },
     department: { type: Schema.Types.ObjectId, ref: COLLECTIONS.DEPARTMENT },
-    collectionCenter: {
-      type: Schema.Types.ObjectId,
-      ref: COLLECTIONS.COLLECTION_CENTER,
-    },
 
     status: { type: Number, default: 0, enum: [0, 1, 2] }, // 2 is blocked or inactive
     browserToken: { type: String },

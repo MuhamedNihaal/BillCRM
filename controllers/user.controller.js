@@ -1,13 +1,10 @@
 import { asyncErrorHandler, Response, Error } from "express-error-catcher";
 import moment from "moment";
 import Counter from "../helper/counter.js";
+import { Types } from "mongoose";
+const ObjectId = Types.ObjectId;
 
-import {
-  checkObjectIdValid,
-  existedValue,
-  paginationValues,
-  validateSpaceAndLetters,
-} from "../helper/functions.js";
+import { checkObjectIdValid, existedValue, paginationValues, validateSpaceAndLetters } from "../helper/functions.js";
 import models from "../models/index.js";
 import { userSchema } from "../utils/validation.yup.js";
 
@@ -18,19 +15,12 @@ export const listUserActivityLog = asyncErrorHandler(async (req, res) => {
   let condition = { userId, show: true };
 
   let count = await models.UserActivity.countDocuments(condition);
-  let data = await models.UserActivity.find(condition)
-    .lean()
-    .sort({ createdAt: -1 })
-    .select("-__v -createdAt -updatedAt -_id")
-    .skip(skip)
-    .limit(limit);
+  let data = await models.UserActivity.find(condition).lean().sort({ createdAt: -1 }).select("-__v -createdAt -updatedAt -_id").skip(skip).limit(limit);
   return new Response(null, { count, data }, 200);
 });
 
 export const getUserInfo = asyncErrorHandler(async (req, res) => {
-  let data = await models.User.findById(req.user?._id).select(
-    "-password -createdAt -updatedAt -__v"
-  );
+  let data = await models.User.findById(req.user?._id).select("-password -createdAt -updatedAt -__v");
   return new Response(null, { data }, 200);
 });
 
@@ -40,8 +30,7 @@ export const addUser = asyncErrorHandler(async (req, res) => {
 
   let payload = await userSchema(req.body);
 
-  let { type, branch, collectionCenter, company, username, module, privilege } =
-    payload;
+  let { type, branch, collectionCenter, company, username, module, privilege } = payload;
 
   if (payload.error) {
     throw new Error(payload.error, 400);
@@ -58,8 +47,7 @@ export const addUser = asyncErrorHandler(async (req, res) => {
       _id: company,
       status: 0,
     });
-    if (!isValidCompany)
-      throw new Error("provided company id is not valid", 400);
+    if (!isValidCompany) throw new Error("provided company id is not valid", 400);
   }
 
   if (type === 1 || type === 2 || type === 3) {
@@ -125,11 +113,7 @@ export const addUser = asyncErrorHandler(async (req, res) => {
       description: `User '${username}' has been added by '${userName}'`,
     })
     .save();
-  return new Response(
-    "successful user added",
-    { data: { _id: user?._id } },
-    200
-  );
+  return new Response("successful user added", { data: { _id: user?._id } }, 200);
 });
 
 export const updateUser = asyncErrorHandler(async (req, res) => {
@@ -240,7 +224,7 @@ export const uploadImage = asyncErrorHandler(async (req, res) => {
 
 export const listUser = asyncErrorHandler(async (req, res) => {
   let { skip, limit } = paginationValues(req.query);
-  let { search } = req.query;
+  let { search, from_date, to_date, privilege } = req.query;
   let condition = { status: 0 };
 
   if (!isNull(search)) {
@@ -253,6 +237,17 @@ export const listUser = asyncErrorHandler(async (req, res) => {
     ];
   }
 
+  if (!isNull(from_date)) condition.date = { $gte: from_date };
+
+  if (!isNull(to_date)) condition.date = { ...condition.date, $lte: to_date };
+
+  if (!isNull(req.query.privilege)) condition.privilege = req.query.privilege;
+
+  if (!isNull(req.queryPolluted.privilege)) condition.privilege = { $in: req.queryPolluted.privilege.map((item) => new ObjectId(item)) };
+
+  console.log(req.queryPolluted.privilege);
+  console.log(condition);
+
   let count = await models.User.countDocuments(condition);
   let data = await models.User.find(condition)
     .lean()
@@ -262,7 +257,6 @@ export const listUser = asyncErrorHandler(async (req, res) => {
     .populate("branch", OPTIONS_FIELD)
     .populate("subBranch", OPTIONS_FIELD)
     .populate("franchise", OPTIONS_FIELD)
-    .populate("collectionCenter", OPTIONS_FIELD)
     .sort({ createdAt: -1 })
     .select("-password -createdAt -updatedAt -__v")
     .skip(skip)

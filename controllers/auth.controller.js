@@ -920,7 +920,7 @@ export const changePassword = asyncErrorHandler(async (req) => {
     throw new Error("Current password is incorrect", 400);
   }
 
-  user = user.generatePasswordHash(newPassword);
+  user.password = user.generatePasswordHash(newPassword);
   user.save();
 
   return new Response("Password changed successful", null, 200);
