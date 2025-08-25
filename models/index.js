@@ -13,6 +13,10 @@ import MainMenu from "./MainMenu.js";
 import SubMenu from "./SubMenu.js";
 
 import Counter from "./Counter.js";
+import Company from "./Company.js";
+import Branch from "./Branch.js";
+import District from "./District.js";
+import State from "./State.js";
 
 export default {
   OtpMessage,
@@ -21,6 +25,11 @@ export default {
   CustomerWebToken,
 
   User,
+  Company,
+  Branch,
+  District,
+  State,
+
   LoginAttempt,
   UserActivity,
   UserToken,

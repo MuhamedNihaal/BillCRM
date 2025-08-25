@@ -14,7 +14,7 @@ import jwt from "jsonwebtoken";
 import { ACCESS_TOKEN_SECRET } from "../config.js";
 
 const secret = speakeasy.generateSecret({
-  name: "CRM Template - CRM",
+  name: "Noble - CRM",
 });
 
 async function loginAttemptFunc(loginAttempt = null, ip = null, username = null, user = null) {

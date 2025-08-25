@@ -15,6 +15,32 @@ export const logInBodyValidation = async (body) => {
   }
 };
 
+export const ChangePasswordSchema = async (body) => {
+  const schema = yup.object({
+    currentPassword: yup.string().trim().required("Current password is required"),
+    newPassword: yup
+      .string()
+      .trim()
+      .required("New password is required")
+      .min(8, "Password must be at least 8 characters")
+      .max(15, "Password must be at most 15 characters")
+      .matches(/[A-Z]/, "Password must contain at least one uppercase letter")
+      .matches(/[!@#$%^&*(),.?":{}|<>]/, "Password must contain at least one special character"),
+    confirmPassword: yup
+      .string()
+      .trim()
+      .oneOf([yup.ref("newPassword"), null], "Passwords must match")
+      .required("Please confirm your new password"),
+  });
+
+  try {
+    return await schema.validate(body, { abortEarly: false });
+  } catch (err) {
+    return { error: err.errors[0] };
+  }
+};
+
+
 const objectIdRegex = /^[0-9a-fA-F]{24}$/;
 const nameStartWithLetterRegex = /^[A-Za-z].*$/;
 const mobileRegex = /^[6-9]\d{9}$/;
