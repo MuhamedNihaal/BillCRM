@@ -5,6 +5,9 @@ let Schema = mongoose.Schema;
 
 let schema = new Schema(
   {
+    username: {
+      type: String,
+    },
     login_ip: {
       type: String,
     },
@@ -21,14 +24,11 @@ let schema = new Schema(
     },
     date: {
       type: String,
-      default: moment().format("YYYY-MM-DD"),
+      default: () => moment().format("YYYY-MM-DD"),
     },
     time: {
       type: String,
-      default: moment().format("HH:mm:ss"),
-    },
-    username: {
-      type: String, // username
+      default: () => moment().format("HH:mm:ss"),
     },
     password: {
       type: String,

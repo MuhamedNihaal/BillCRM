@@ -8,6 +8,7 @@ let modulesSchema = new Schema(
     name: {
       type: String,
     },
+    path: String,
     code: {
       type: String,
     },
@@ -32,11 +33,11 @@ let modulesSchema = new Schema(
     },
     date: {
       type: String,
-      default: moment().format("YYYY-MM-DD"),
+      default: () => moment().format("YYYY-MM-DD"),
     },
     time: {
       type: String,
-      default: moment().format("HH:mm:ss"),
+      default: () => moment().format("HH:mm:ss"),
     },
     upDate: {
       type: String,
@@ -46,6 +47,10 @@ let modulesSchema = new Schema(
     },
     redirectUrl: {
       type: String,
+    },
+    masterPath: {
+      type: Boolean,
+      default: false,
     },
   },
   { timestamps: true, collection: COLLECTIONS.MODULES }

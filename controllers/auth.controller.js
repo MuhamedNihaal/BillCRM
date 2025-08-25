@@ -1,26 +1,21 @@
 import { Router } from "express";
 import { asyncErrorHandler, Response, Error } from "express-error-catcher";
-import { logInBodyValidation } from "../utils/validation.yup.js";
+import { ChangePasswordSchema, logInBodyValidation } from "../validation/validation.yup.js";
 import models from "../models/index.js";
 const app = Router();
 import moment from "moment";
 import { accountOrIpBlocking } from "../utils/rule.js";
-import { ACCESS_TOKEN_RES_EXPIRE, OTP_SECRET_KEY } from "../config.js";
 import speakeasy from "speakeasy";
 import qrcode from "qrcode";
 import generateTokens from "../utils/generateUserToken.js";
-import { COLLECTIONS } from "../config.js";
-import { decodeAndEncode } from "../helper/functions.js";
+import { checkObjectIdValid, decodeAndEncode } from "../helper/functions.js";
+import DeviceDetector from "device-detector-js";
+import jwt from "jsonwebtoken";
+import { ACCESS_TOKEN_SECRET } from "../config.js";
 
 const secret = speakeasy.generateSecret({
-  // name: OTP_SECRET_KEY,
-  // name: OTP_SECRET_KEY,
-  name: "Template - CRM",
+  name: "CRM Template - CRM",
 });
-
-const placeHolderReplacer = (message, otp) => {
-  return message?.replaceAll(/\{\{(.*?)\}\}/g, otp);
-};
 
 async function loginAttemptFunc(loginAttempt = null, ip = null, username = null, user = null) {
   if (loginAttempt) {
@@ -54,7 +49,7 @@ async function loginAttemptFunc(loginAttempt = null, ip = null, username = null,
     .UserActivity({
       ip: ip,
       action: "Un-Authorized Login",
-      description: "Un-Authorized Login Attempt at " + moment().format("DD-MM-YYYY HH:mm:ss") + " - Tried Username :" + username,
+      description: `Un-Authorized Login attempt at ${moment().format("DD-MM-YYYY HH:mm:ss")} - Tried Username : ${username}`,
     })
     .save();
 }
@@ -63,19 +58,26 @@ export const login = (platform) => {
   return asyncErrorHandler(async (req, res) => {
     const { username, password, rememberMe, error, deviceId } = await logInBodyValidation(req.body);
 
+    const userAgent = req.headers["user-agent"];
+    const deviceDetector = new DeviceDetector();
+    const device = deviceDetector.parse(userAgent);
+
+    let deviceInfo = {
+      browser: device?.client?.name ?? "",
+      os: device?.os?.name ?? "",
+      platform: device?.os?.platform ?? "",
+      deviceType: device?.device?.type ?? "",
+    };
+
     if (error) throw new Error(error, 400);
     let static_error = "Invalid credentials. Check your username or password.";
 
     if (platform === "web") {
       const loginAttempt = await models.LoginAttempt.findOne({
         $or: [{ login_ip: req.ip }, { username: username }],
-      });
+      }).sort({ createdAt: -1 });
 
       let user = await models.User.findOne({ username });
-      // .populate(
-      //   "modules",
-      //   "moduleName shortCode redirect_url"
-      // );
 
       // <<======= check if user is block =======>>
       if (loginAttempt && loginAttempt.status === 2) {
@@ -135,15 +137,22 @@ export const login = (platform) => {
       delete user?.twoFactor?.secret;
       delete user?.twoFactor?.lastUsedOTP;
 
-      const { accessToken, refreshToken } = await generateTokens(user, rememberMe, deviceId);
+      const { accessToken, refreshToken } = await generateTokens(user, rememberMe, deviceId, deviceInfo);
 
       res.cookie("token", accessToken, {
-        maxAge: ACCESS_TOKEN_RES_EXPIRE,
         secure: true,
         sameSite: "none",
       });
 
-      return new Response("Login successful", { data: decodeAndEncode(user), refreshToken }, 200);
+      if (!user.twoFactor.enabled) {
+        res.cookie("refresh-token", refreshToken, {
+          secure: true,
+          sameSite: "none",
+          ...(rememberMe ? { maxAge: 30 * 24 * 60 * 60 * 1000 } : {}),
+        });
+      }
+
+      return new Response("Login successful", { data: decodeAndEncode(user), accessToken }, 200);
     } else {
       throw new Error("Invalid platform", 400);
     }
@@ -160,19 +169,22 @@ export const allowed = asyncErrorHandler(async (req) => {
   if (privilegeInfo?.superAdmin) {
     modules = await models.Modules.aggregate([
       {
-        $match: {
-          status: 0,
-        },
+        $match: { status: 0 },
       },
       {
         $lookup: {
-          from: COLLECTIONS.MAIN_MENUS,
+          from: "mainMenus",
           let: { moduleId: "$_id" },
           pipeline: [
             {
               $match: {
                 $expr: {
-                  $and: [{ $eq: ["$module", "$$moduleId"] }, { $eq: ["$status", 0] }],
+                  $and: [
+                    {
+                      $eq: ["$module", "$$moduleId"],
+                    },
+                    { $eq: ["$status", 0] },
+                  ],
                 },
               },
             },
@@ -182,15 +194,19 @@ export const allowed = asyncErrorHandler(async (req) => {
       },
       {
         $lookup: {
-          from: COLLECTIONS.SUB_MENUS,
+          from: "subMenus",
           let: { mainMenuIds: "$mainMenus._id" },
           pipeline: [
             {
               $match: {
                 $expr: {
-                  $in: ["$mainMenu", "$$mainMenuIds"],
+                  $and: [
+                    {
+                      $in: ["$mainMenu", "$$mainMenuIds"],
+                    },
+                    { $eq: ["$status", 0] },
+                  ],
                 },
-                status: 0,
               },
             },
             {
@@ -200,11 +216,12 @@ export const allowed = asyncErrorHandler(async (req) => {
             },
             {
               $project: {
-                name: 1,
+                title: "$name",
                 mainMenu: 1,
-                link: 1,
+                path: 1,
                 icon: 1,
                 order: 1,
+                type: "item",
               },
             },
           ],
@@ -218,20 +235,44 @@ export const allowed = asyncErrorHandler(async (req) => {
               input: "$mainMenus",
               as: "menu",
               in: {
-                _id: "$$menu._id",
-                name: "$$menu.name",
-                icon: "$$menu.icon",
-                link: "$$menu.link",
-                order: {
-                  $ifNull: ["$$menu.order", 999],
-                },
-                subMenus: {
-                  $filter: {
-                    input: "$subMenus",
-                    as: "sub",
-                    cond: {
-                      $eq: ["$$sub.mainMenu", "$$menu._id"],
+                $let: {
+                  vars: {
+                    matchedSubMenus: {
+                      $filter: {
+                        input: "$subMenus",
+                        as: "sub",
+                        cond: {
+                          $eq: ["$$sub.mainMenu", "$$menu._id"],
+                        },
+                      },
                     },
+                  },
+                  in: {
+                    _id: "$$menu._id",
+                    title: "$$menu.name",
+                    icon: "$$menu.icon",
+                    path: "$$menu.path",
+                    order: {
+                      $ifNull: ["$$menu.order", 999],
+                    },
+                    subMenus: "$$matchedSubMenus",
+                    type: {
+                      $cond: {
+                        if: {
+                          $gt: [
+                            {
+                              $size: "$$matchedSubMenus",
+                            },
+                            0,
+                          ],
+                        },
+                        then: "collapse",
+                        else: "item",
+                      },
+                    },
+                    divider: "$$menu.divider",
+                    titleMenu: "$$menu.titleMenu",
+                    defaultOpen: "$$menu.defaultOpen",
                   },
                 },
               },
@@ -251,24 +292,29 @@ export const allowed = asyncErrorHandler(async (req) => {
       },
       {
         $project: {
-          name: 1,
+          id: "$_id",
+          title: "$name",
+          path: 1,
           code: 1,
-          icon: 1,
-          order: {
-            $ifNull: ["$order", 999],
-          },
+          type: "root",
+          Icon: "$icon",
+          order: { $ifNull: ["$order", 999] },
           redirectUrl: 1,
-          mainMenus: {
+          childs: {
             $map: {
               input: "$mainMenus",
               as: "menu",
               in: {
                 _id: "$$menu._id",
-                name: "$$menu.name",
+                title: "$$menu.title",
                 icon: "$$menu.icon",
-                link: "$$menu.link",
+                path: "$$menu.path",
                 order: "$$menu.order",
-                subMenus: {
+                titleMenu: "$$menu.titleMenu",
+                defaultOpen: "$$menu.defaultOpen",
+                type: "$$menu.type",
+                divider: "$$menu.divider",
+                childs: {
                   $sortArray: {
                     input: "$$menu.subMenus",
                     sortBy: { order: 1 },
@@ -291,13 +337,6 @@ export const allowed = asyncErrorHandler(async (req) => {
       {
         $match: {
           _id: ObjectId(privilege),
-        },
-      },
-      {
-        $project: {
-          alloted_modules: 1,
-          alloted_main_menus: 1,
-          alloted_submenus: 1,
         },
       },
       {
@@ -328,9 +367,7 @@ export const allowed = asyncErrorHandler(async (req) => {
           as: "modules",
         },
       },
-      {
-        $unwind: "$modules",
-      },
+      { $unwind: "$modules" },
       {
         $lookup: {
           from: "mainMenus",
@@ -377,6 +414,11 @@ export const allowed = asyncErrorHandler(async (req) => {
                 },
               },
             },
+            {
+              $addFields: {
+                order: { $ifNull: ["$order", 999] },
+              },
+            },
             { $sort: { order: 1, time: 1 } },
           ],
           as: "subMenus",
@@ -389,66 +431,95 @@ export const allowed = asyncErrorHandler(async (req) => {
               input: "$mainMenus",
               as: "menu",
               in: {
-                _id: "$$menu._id",
-                name: "$$menu.name",
-                link: "$$menu.link",
-                icon: "$$menu.icon",
-                order: {
-                  $ifNull: ["$$menu.order", 999],
-                },
-                permissions: {
-                  $arrayElemAt: [
-                    {
+                $let: {
+                  vars: {
+                    matchedSubMenus: {
                       $filter: {
-                        input: "$alloted_main_menus",
-                        as: "alloted",
-                        cond: {
-                          $eq: ["$$alloted.id", "$$menu._id"],
-                        },
-                      },
-                    },
-                    0,
-                  ],
-                },
-                subMenus: {
-                  $filter: {
-                    input: {
-                      $map: {
                         input: {
-                          $filter: {
-                            input: "$subMenus",
+                          $map: {
+                            input: {
+                              $filter: {
+                                input: "$subMenus",
+                                as: "sub",
+                                cond: {
+                                  $eq: ["$$sub.mainMenu", "$$menu._id"],
+                                },
+                              },
+                            },
                             as: "sub",
-                            cond: {
-                              $eq: ["$$sub.mainMenu", "$$menu._id"],
+                            in: {
+                              _id: "$$sub._id",
+                              title: "$$sub.name",
+                              path: "$$sub.path",
+                              icon: "$$sub.icon",
+                              order: {
+                                $ifNull: ["$$sub.order", 999],
+                              },
+                              permissions: {
+                                $arrayElemAt: [
+                                  {
+                                    $filter: {
+                                      input: "$alloted_submenus",
+                                      as: "aSub",
+                                      cond: {
+                                        $eq: ["$$aSub.id", "$$sub._id"],
+                                      },
+                                    },
+                                  },
+                                  0,
+                                ],
+                              },
                             },
                           },
                         },
-                        as: "sub",
-                        in: {
-                          _id: "$$sub._id",
-                          name: "$$sub.name",
-                          link: "$$sub.link",
-                          icon: "$$sub.icon",
-                          permissions: {
-                            $arrayElemAt: [
-                              {
-                                $filter: {
-                                  input: "$alloted_submenus",
-                                  as: "alloted",
-                                  cond: {
-                                    $eq: ["$$alloted.id", "$$sub._id"],
-                                  },
-                                },
-                              },
-                              0,
-                            ],
-                          },
+                        as: "s",
+                        cond: {
+                          $eq: ["$$s.permissions.view", true],
                         },
                       },
                     },
-                    as: "subMenu",
-                    cond: {
-                      $eq: ["$$subMenu.permissions.view", true],
+                  },
+                  in: {
+                    _id: "$$menu._id",
+                    title: "$$menu.name",
+                    path: "$$menu.path",
+                    icon: "$$menu.icon",
+                    order: {
+                      $ifNull: ["$$menu.order", 999],
+                    },
+                    type: {
+                      $cond: {
+                        if: {
+                          $gt: [
+                            {
+                              $size: "$$matchedSubMenus",
+                            },
+                            0,
+                          ],
+                        },
+                        then: "collapse",
+                        else: "item",
+                      },
+                    },
+                    childs: {
+                      $sortArray: {
+                        input: "$$matchedSubMenus",
+                        sortBy: { order: 1 },
+                      },
+                    },
+                    permissions: {
+                      $arrayElemAt: [
+                        {
+                          $filter: {
+                            input: "$alloted_main_menus",
+                            as: "aMenu",
+                            cond: {
+                              $eq: ["$$aMenu.id", "$$menu._id"],
+                            },
+                          },
+                        },
+                        0,
+                      ],
                     },
                   },
                 },
@@ -458,22 +529,17 @@ export const allowed = asyncErrorHandler(async (req) => {
         },
       },
       {
-        $match: {
-          "modules.status": { $eq: 0 },
-        },
-      },
-      {
         $project: {
-          moduleId: "$modules._id",
-          name: "$modules.name",
-          icon: "$modules.icon",
+          id: "$modules._id",
+          title: "$modules.name",
+          path: "$modules.path",
           code: "$modules.code",
+          Icon: "$modules.icon",
+          type: "root",
           redirectUrl: "$modules.redirectUrl",
-          mainMenus: 1,
-          order: {
-            $ifNull: ["$modules.order", 999],
-          },
+          order: { $ifNull: ["$modules.order", 999] },
           updatedAt: "$modules.updatedAt",
+          childs: "$mainMenus",
         },
       },
       {
@@ -497,51 +563,239 @@ export const allowed = asyncErrorHandler(async (req) => {
 });
 
 export const logout = asyncErrorHandler(async (req, res) => {
-  console.log(req.deviceId);
+  let { device } = req.query;
 
-  await models.UserToken.findOneAndDelete({
-    userId: req.user?._id,
-    deviceId: req.deviceId,
-  });
+  if (device === "all") {
+    await models.UserToken.deleteMany({
+      userId: req.user?._id,
+      // "x-refresh-token": { $exists: false },
+    });
+  } else if (!checkObjectIdValid(device)) {
+    await models.UserToken.findOneAndDelete({
+      userId: req.user?._id,
+      deviceId: req.deviceId,
+      // "x-refresh-token": { $exists: false },
+    });
+  }
 
-  res.cookie("token", "", { expires: new Date(0) });
-  res.clearCookie("token");
+  if (checkObjectIdValid(device)) {
+    await models.UserToken.findOneAndDelete({
+      _id: device,
+      // "x-refresh-token": { $exists: false },
+    });
+  }
+
+  if (device === "all" && !checkObjectIdValid(device)) {
+    res.cookie("token", "", { expires: new Date(0) });
+    res.clearCookie("token");
+    res.cookie("refresh-token", "", { expires: new Date(0) });
+    res.clearCookie("refresh-token");
+  }
+
   return res.status(200).json({ message: "logout successful" });
 });
 
-export const verifyTwoFactor = asyncErrorHandler(async (req) => {
-  const secret = req?.user?.twoFactor?.secret;
+export const verifyTwoFactor = asyncErrorHandler(async (req, res) => {
+  try {
+    const details = jwt.verify(req.cookies.token, ACCESS_TOKEN_SECRET);
 
-  const { token } = req.body;
+    const { token, rememberMe } = req.body;
+    if (isNull(token)) throw new Error("Please enter a otp", 400);
 
-  if (isNull(token)) throw new Error("Please enter a otp", 400);
+    if (!details?._id) throw new Error("User not found.", 404);
 
-  const verified = speakeasy.totp.verify({
-    secret: secret,
-    encoding: "ascii",
-    token,
-  });
+    const user = await models.User.findById(details._id);
+    if (!user) throw new Error("User not found", 404);
 
-  //? update last used token , timestamp and clearing qrCode
-  if (verified) {
-    await models.User.updateOne(
-      { _id: req.user._id },
-      {
-        $set: {
-          "twoFactor.used": true,
-          "twoFactor.lastUsedOTP": token,
-          "twoFactor.lastUsed": moment().format(),
-        },
-        $unset: {
-          "twoFactor.qrCode": "",
-        },
+    const secret = user?.twoFactor?.secret;
+
+    const verified = speakeasy.totp.verify({
+      secret: secret,
+      encoding: "ascii",
+      token,
+    });
+
+    if (!verified) {
+      throw new Error("Invalid Otp Code", 400);
+    }
+
+    //? update last used token , timestamp and clearing qrCode
+    if (verified) {
+      await models.User.updateOne(
+        { _id: user?._id },
+        {
+          $set: {
+            "twoFactor.used": true,
+            "twoFactor.lastUsedOTP": token,
+            "twoFactor.lastUsed": moment().format(),
+          },
+          $unset: {
+            "twoFactor.qrCode": "",
+          },
+        }
+      );
+
+      const refreshToken = await models.UserToken.findOne({ deviceId: details?.deviceId, userId: details?._id });
+
+      if (!refreshToken) {
+        throw new Error("Unauthorized access.", 401);
       }
-    );
+
+      res.cookie("refresh-token", refreshToken.token, {
+        secure: true,
+        sameSite: "none",
+        ...(rememberMe ? { maxAge: 30 * 24 * 60 * 60 * 1000 } : {}),
+      });
+
+      return new Response("Two auth successful", null, 200);
+    }
+  } catch (error) {
+    if (error.name === "TokenExpiredError") throw new Error("Your session has been expired", 401);
+    else throw new Error(error.message, 401);
   }
-
-  const data = decodeAndEncode({ verified });
-
-  return new Response(null, { data }, 200);
 });
 
+export const listSessions = asyncErrorHandler(async (req) => {
+  let data = await models.UserToken.aggregate([
+    {
+      $match: {
+        userId: ObjectId(req.user?._id),
+        blacklisted: false,
+        "x-refresh-token": { $exists: false },
+      },
+    },
+    {
+      $sort: { _id: -1 },
+    },
+    {
+      $project: {
+        _id: 1,
+        os: { $ifNull: ["$os", "Unkown"] },
+        platform: { $ifNull: ["$platform", "--"] },
+        deviceType: {
+          $ifNull: ["$deviceType", "--"],
+        },
+        browser: { $ifNull: ["$browser", "--"] },
+        deviceId: 1, // needed for $facet filtering
+        icon: {
+          $switch: {
+            branches: [
+              {
+                case: {
+                  $eq: [{ $toLower: "$os" }, "windows"],
+                },
+                then: "FaDesktop",
+              },
+              {
+                case: {
+                  $eq: [{ $toLower: "$os" }, "mac"],
+                },
+                then: "FaApple",
+              },
+              {
+                case: {
+                  $eq: [{ $toLower: "$os" }, "linux"],
+                },
+                then: "FaLinux",
+              },
+              {
+                case: {
+                  $eq: [{ $toLower: "$os" }, "android"],
+                },
+                then: "FaAndroid",
+              },
+              {
+                case: {
+                  $eq: [{ $toLower: "$os" }, "ios"],
+                },
+                then: "FaMobileAlt",
+              },
+            ],
+            default: "FaQuestion",
+          },
+        },
+      },
+    },
+    {
+      $facet: {
+        currentSession: [
+          {
+            $match: {
+              deviceId: req.deviceId,
+            },
+          },
+        ],
+        otherSessions: [
+          {
+            $match: {
+              deviceId: {
+                $ne: req.deviceId,
+              },
+            },
+          },
+        ],
+      },
+    },
+    {
+      $project: {
+        currentSession: {
+          $map: {
+            input: "$currentSession",
+            as: "item",
+            in: {
+              os: "$$item.os",
+              platform: "$$item.platform",
+              deviceType: "$$item.deviceType",
+              browser: "$$item.browser",
+              icon: "$$item.icon",
+            },
+          },
+        },
+        otherSessions: {
+          $map: {
+            input: "$otherSessions",
+            as: "item",
+            in: {
+              _id: "$$item._id",
+              os: "$$item.os",
+              platform: "$$item.platform",
+              deviceType: "$$item.deviceType",
+              browser: "$$item.browser",
+              icon: "$$item.icon",
+            },
+          },
+        },
+      },
+    },
+  ]);
+  return new Response("Session", { data: data[0] ?? {} }, 200);
+});
+
+export const changePassword = asyncErrorHandler(async (req) => {
+  let userId = req.user?._id;
+
+  let payload = await ChangePasswordSchema(req.body);
+  if (payload.error) {
+    throw new Error(payload.error, 400);
+  }
+
+  let { currentPassword, newPassword } = payload;
+
+  let user = await models.User.findOne({ _id: userId, status: 0 });
+
+  if (!user) {
+    throw new Error("Invalid User", 404);
+  }
+
+  let isPasswordValid = user.validatePassword(currentPassword, user.password);
+
+  if (!isPasswordValid) {
+    throw new Error("Current password is incorrect", 400);
+  }
+
+  user.password = user.generatePasswordHash(newPassword);
+  user.save();
+
+  return new Response("Password changed successful", null, 200);
+});
 export default app;

@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { COLLECTIONS } from "../config.js";
 let Schema = mongoose.Schema;
+import moment from "moment";
 
 let privilegeSchema = new Schema(
   {
@@ -100,6 +101,9 @@ let privilegeSchema = new Schema(
     ],
     superAdmin: { type: Boolean, default: false },
     parent: { type: Schema.Types.ObjectId, ref: COLLECTIONS.PRIVILEGES },
+
+    date: { type: String, default: () => moment().format("YYYY-MM-DD") },
+    time: { type: String, default: () => moment().format("HH:mm:ss") },
   },
   { timestamps: true, collection: COLLECTIONS.PRIVILEGES }
 );

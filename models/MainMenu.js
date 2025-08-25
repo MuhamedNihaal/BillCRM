@@ -8,13 +8,14 @@ let menuSchema = new Schema(
     ip: {
       type: String,
     },
+    path: String,
     date: {
       type: String,
-      default: moment().format("YYYY-MM-DD"),
+      default: () => moment().format("YYYY-MM-DD"),
     },
     time: {
       type: String,
-      default: moment().format("HH:mm:ss"),
+      default: () => moment().format("HH:mm:ss"),
     },
     status: {
       type: Number,
@@ -26,15 +27,15 @@ let menuSchema = new Schema(
     name: {
       type: String,
     },
-    link: {
-      type: String,
-    },
     icon: {
       type: String,
     },
     order: {
       type: Number,
     },
+    divider: Boolean,
+    group: Number,
+    titleMenu: Boolean,
     masterPath: {
       type: Boolean,
       default: false,

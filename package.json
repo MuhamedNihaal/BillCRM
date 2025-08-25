@@ -23,6 +23,7 @@
     "chalk": "^5.4.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
+    "device-detector-js": "^3.0.3",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "express-error-catcher": "^1.0.2",

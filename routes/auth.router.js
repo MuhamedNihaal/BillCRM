@@ -13,10 +13,12 @@ const loginLimiter = rateLimiter({
 import * as controller from "../controllers/auth.controller.js";
 router.use(loginLimiter);
 router.post("/login", controller.login("web"));
+router.post("/two-step", controller.verifyTwoFactor);
 
 router.use(auth({ common: true }));
-router.post("/check-allowed", controller.allowed);
+router.get("/check-allowed", controller.allowed);
 router.post("/logout", controller.logout);
-router.post("/two-step", controller.verifyTwoFactor);
+router.get("/session", controller.listSessions);
+router.put("/change-password", controller.changePassword);
 
 export default router;

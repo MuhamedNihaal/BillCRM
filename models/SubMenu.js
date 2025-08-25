@@ -10,11 +10,11 @@ let submenuSchema = new Schema(
     },
     date: {
       type: String,
-      default: moment().format("YYYY-MM-DD"),
+      default: () => moment().format("YYYY-MM-DD"),
     },
     time: {
       type: String,
-      default: moment().format("HH:mm:ss"),
+      default: () => moment().format("HH:mm:ss"),
     },
     status: {
       type: Number,
@@ -27,9 +27,6 @@ let submenuSchema = new Schema(
     name: {
       type: String,
     },
-    link: {
-      type: String,
-    },
     icon: {
       type: String,
     },
@@ -40,6 +37,7 @@ let submenuSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    path: String,
     order: {
       type: Number,
     },

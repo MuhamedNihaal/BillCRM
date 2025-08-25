@@ -30,8 +30,9 @@ const verifyRefreshToken = (refreshToken) => {
 
       resolve({
         data: tokenDetails,
+        tokenData: details,
         success: true,
-        message: "Your session has expired",
+        message: "Your session is valid",
       });
     } catch (error) {
       reject({

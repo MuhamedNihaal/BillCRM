@@ -1,16 +1,11 @@
 import jwt from "jsonwebtoken";
 import { asyncErrorHandler, Error } from "express-error-catcher";
 import models from "../models/index.js";
-import {
-  ACCESS_TOKEN_JWT_EXPIRE,
-  ACCESS_TOKEN_RES_EXPIRE,
-  ACCESS_TOKEN_SECRET,
-  PRIVILEGES,
-  PRODUCTION,
-} from "../config.js";
-import { decodeAndEncode, isObjectIdsEqual } from "../helper/functions.js";
+import { ACCESS_TOKEN_SECRET, PRIVILEGES, PRODUCTION } from "../config.js";
+import { isObjectIdsEqual } from "../helper/functions.js";
 import verifyRefreshToken from "../utils/verifyRefreshToken.js";
-import moment from "moment";
+import { userActivity } from "../utils/userActivityGen.js";
+import generateTokens from "../utils/generateUserToken.js";
 
 const permissionCheck = (method) => {
   method = typeof method === "string" ? method.toUpperCase() : null;
@@ -24,49 +19,28 @@ const permissionCheck = (method) => {
   return PERMISSION_MAP.find((p) => p.method === method)?.field ?? null;
 };
 
-const UserAuth = (
-  { menu = null, sub_menu = null, master = false, common = false } = {},
-  res
-) => {
-  if (typeof res !== "undefined")
+const UserAuth = ({ menu = null, sub_menu = null, master = false, common = false } = {}, res) => {
+  if (typeof res !== "undefined") {
     res?.status(500)?.json({
-      message:
-        "Ensure proper authentication middleware parameters. Refer to README.md.",
+      message: "Ensure proper authentication middleware parameters. Refer to README.md.",
     });
+  }
+
   return asyncErrorHandler(async (req, res, next) => {
     try {
       if (!menu && !sub_menu && !master && !common) {
-        throw new Error(
-          "Unauthorized action. Ensure proper authentication middleware parameters. Refer to README.md."
-        );
+        throw new Error("Unauthorized action. Ensure proper authentication middleware parameters. Refer to README.md.");
       }
 
       const token = req.cookies.token || req.headers["x-access-token"];
-
-      let refreshTokenHeader = req.headers["x-refresh-token"];
-      let refreshToken = await decodeAndEncode(refreshTokenHeader, false);
-
-      let currentTime = moment();
-      if (!refreshToken?.token) {
-        throw new Error("Your session has expired", 403, { tokenErr: true });
-      }
-
-      if (!refreshToken.token && !token) {
-        throw new Error("Your session has expired", 403, { tokenErr: true });
-      }
-
-      if (!refreshToken?.requestAt) {
-        throw new Error("Requested time not available in headers", 403);
-      }
-      if (currentTime.isAfter(refreshToken?.requestAt)) {
-        throw new Error("Requested time expired", 417);
-      }
+      const refreshToken = req.cookies["refresh-token"] || req.headers["x-refresh-token"];
 
       let flag = false;
 
+      const { data: refreshData, tokenData } = await verifyRefreshToken(refreshToken);
+
       if (!token) {
-        const verifiedToken = await verifyRefreshToken(refreshToken.token);
-        let user = await models.User.findById(verifiedToken.data._id);
+        let user = await models.User.findById(refreshData._id).populate("privilege", "name");
         user = user.toObject();
         delete user.password;
         delete user.date;
@@ -75,25 +49,61 @@ const UserAuth = (
         // delete user?.twoFactor?.secret;
         delete user?.twoFactor?.lastUsedOTP;
 
-        const accessToken = jwt.sign({ _id: user._id }, ACCESS_TOKEN_SECRET, {
-          expiresIn: ACCESS_TOKEN_JWT_EXPIRE,
-        });
+        let rememberMe = refreshData.exp - refreshData.iat === 604800 ? false : true;
+
+        const { accessToken, refreshToken: newRefreshToken } = await generateTokens(user, rememberMe, refreshData?.deviceId, tokenData, refreshToken);
 
         res.cookie("token", accessToken, {
-          maxAge: ACCESS_TOKEN_RES_EXPIRE,
           secure: true,
           sameSite: "none",
+          // maxAge: ACCESS_TOKEN_RES_EXPIRE,
         });
 
-        req.deviceId = verifiedToken.data?.deviceId ?? "";
+        res.cookie("refresh-token", newRefreshToken, {
+          secure: true,
+          sameSite: "none",
+          ...(rememberMe ? { maxAge: 30 * 24 * 60 * 60 * 1000 } : {}),
+        });
+
+        req.deviceId = newRefreshToken.data?.deviceId ?? "";
         req.user = user;
-        req.privilege = req.user.privilege;
+        req.privilege = req.user.privilege?._id;
 
         flag = true;
       } else {
-        const tokenDetails = jwt.verify(token, ACCESS_TOKEN_SECRET);
+        let tokenDetails = null;
 
-        let user = await models.User.findById(tokenDetails._id);
+        let user = null;
+        try {
+          tokenDetails = await jwt.verify(token, ACCESS_TOKEN_SECRET);
+          user = await models.User.findById(tokenDetails?._id).populate("privilege", "name");
+        } catch (error) {
+          tokenDetails = refreshData;
+
+          let rememberMe = refreshData.exp - refreshData.iat === 604800 ? false : true;
+
+          user = await models.User.findById(refreshData?._id).populate("privilege", "name");
+
+          const { accessToken, refreshToken: newRefreshToken } = await generateTokens(
+            user,
+            rememberMe,
+            refreshData?.deviceId,
+            tokenData,
+            refreshToken
+          );
+
+          res.cookie("token", accessToken, {
+            secure: true,
+            sameSite: "none",
+          });
+
+          res.cookie("refresh-token", newRefreshToken, {
+            secure: true,
+            sameSite: "none",
+            ...(rememberMe ? { maxAge: 30 * 24 * 60 * 60 * 1000 } : {}),
+          });
+        }
+
         user = user.toObject();
 
         delete user.password;
@@ -106,69 +116,88 @@ const UserAuth = (
         // checking access token and refresh token are same user
         if (PRODUCTION === "true") {
           let refreshSameUser = await models.UserToken.findOne({
-            token: refreshToken.token,
+            token: refreshToken,
             userId: user?._id,
           });
 
           if (!refreshSameUser) {
-            throw new Error("token mismatch", 403);
+            throw new Error("Token mismatch", 403);
           }
         }
 
         req.deviceId = tokenDetails?.deviceId ?? "";
         req.user = user;
-        req.privilege = req.user.privilege;
+        req.privilege = req.user.privilege?._id;
 
         flag = true;
       }
 
       if (flag) {
-        let userId = req.user?._id;
-        let userName = req?.user?.firstName ?? req.user?.username;
+        let user = req.user;
+        let userId = user?._id;
+        let userName = user?.firstName ?? user?.username;
 
         let role = await models.Privilege.findById(req.privilege);
 
-        req.isAdmin =
-          isObjectIdsEqual(req.privilege, PRIVILEGES.ADMIN) ||
-          isObjectIdsEqual(req.privilege, PRIVILEGES.DEVELOPER) ||
-          role?.superAdmin;
+        const isAdmin =
+          isObjectIdsEqual(req.privilege, PRIVILEGES.ADMIN) || isObjectIdsEqual(req.privilege, PRIVILEGES.DEVELOPER) || role?.superAdmin;
 
-        req.branch = req.headers.branch || null;
-        req.subBranch = req.headers["sub-branch"] || null;
-        req.franchise = req.headers.franchise || null;
+        req.isAdmin = isAdmin;
 
-        req.collectionCenter = req.headers["collection-center"] || null;
-        req.branchType = req.headers["branch-type"] || null;
-        req.userType = req.user?.type;
+        let branchMap = {
+          1: "branch",
+          2: "subBranch",
+          3: "franchise",
+        };
+
+        let selectedBranchUser = null;
+        if (!isAdmin) {
+          selectedBranchUser = user[branchMap[user?.type]];
+        }
+
+        if (!isAdmin && !selectedBranchUser) {
+          throw new Error("first assign a branch to continue..", 403);
+        }
+
+        req.userType = user?.type;
+
+        if (isAdmin) {
+          req.branch = req.headers.branch || null;
+          req.subBranch = req.headers["sub-branch"] || null;
+          req.franchise = req.headers.franchise || null;
+
+          req.collectionCenter = req.headers["collection-center"] || null;
+          req.branchType = Number(req.headers["branch-type"]) || null;
+          req.department = req.headers["department"] || null;
+        } else if (user?.type === 1) {
+          req.branch = selectedBranchUser;
+          req.branchType = Number(req.headers["branch-type"]) || user?.type;
+          req.subBranch = req.headers["sub-branch"] || null;
+          req.franchise = req.headers.franchise || null;
+        } else if (user?.type === 2) {
+          req.branchType = user?.type;
+          req.subBranch = selectedBranchUser;
+        } else if (user?.type === 2) {
+          req.branchType = user?.type;
+          req.franchise = selectedBranchUser;
+        }
 
         if (role?.superAdmin || common) return next();
 
         if (master) {
-          await models
-            .UserActivity({
-              ip: req.ip,
-              action: "Un-Authorized Access",
-              user: userName,
-              show: false,
-              userId: userId,
-              description: `${userName} attempted to access ${req?.originalUrl}`,
-            })
-            .save();
+          userActivity({ req, action: "Un-Authorized Access", description: `${userName} attempted to access ${req?.originalUrl}` });
 
-          throw new Error(
-            "You are not authorized to perform this action.",
-            403
-          );
+          throw new Error("You are not authorized to perform this action.", 403);
         }
 
         if (menu) {
           let isValid = await models.MainMenu.findOne({
-            $or: [{ name: menu }, { link: menu }],
+            $or: [{ name: menu }, { path: menu }],
             status: 0,
           }).select("_id module");
 
           if (!isValid) {
-            throw new Error("This module not found or inactive", 500);
+            throw new Error("You do not have permission to perform this action in this menu.", 500);
           }
 
           let allowed = await models.Privilege.findOne(
@@ -193,10 +222,7 @@ const UserAuth = (
               })
               .save();
 
-            throw new Error(
-              "You are not authorized to perform this action.",
-              403
-            );
+            throw new Error("You are not authorized to perform this action.", 403);
           }
 
           return next();
@@ -204,12 +230,12 @@ const UserAuth = (
 
         if (sub_menu) {
           let isValid = await models.SubMenu.findOne({
-            $or: [{ name: sub_menu }, { link: sub_menu }],
+            $or: [{ name: sub_menu }, { path: sub_menu }],
             status: 0,
           }).select("mainMenu _id");
 
           if (!isValid) {
-            throw new Error("This module not found or inactive", 500);
+            throw new Error("You do not have permission to perform this action in this sub menu.", 500);
           }
 
           let allowed = await models.Privilege.findOne(
@@ -222,10 +248,7 @@ const UserAuth = (
 
           allowed = allowed?.alloted_submenus[0];
 
-          if (
-            (!isNull(allowed) && !allowed[permissionCheck(req.method)]) ||
-            isNull(allowed)
-          ) {
+          if ((!isNull(allowed) && !allowed[permissionCheck(req.method)]) || isNull(allowed)) {
             await models
               .UserActivity({
                 ip: req.ip,
@@ -237,10 +260,7 @@ const UserAuth = (
               })
               .save();
 
-            throw new Error(
-              "You are not authorized to perform this action.",
-              403
-            );
+            throw new Error("You are not authorized to perform this action.", 403);
           }
 
           return next();
@@ -253,9 +273,7 @@ const UserAuth = (
           removeRefreshToken: true,
         });
       } else {
-        return res
-          .status(err?.statusCode ?? 400)
-          .json({ message: err?.message });
+        return res.status(err?.statusCode ?? 400).json({ message: err?.message });
       }
     }
   });

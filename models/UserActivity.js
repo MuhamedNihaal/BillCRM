@@ -16,11 +16,11 @@ let userActivitySchema = new Schema(
     },
     date: {
       type: String,
-      default: moment().format("YYYY-MM-DD"),
+      default: () => moment().format("YYYY-MM-DD"),
     },
     time: {
       type: String,
-      default: moment().format("HH:mm:ss"),
+      default: () => moment().format("HH:mm:ss"),
     },
     userId: {
       type: Schema.Types.ObjectId,

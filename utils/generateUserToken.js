@@ -2,7 +2,16 @@ import jwt from "jsonwebtoken";
 import models from "../models/index.js";
 import { ACCESS_TOKEN_JWT_EXPIRE, ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET } from "../config.js";
 
-const generateTokens = async (user, rememberMe = false, deviceId = "") => {
+/**
+ *
+ * @param {*} user
+ * @param {boolean} rememberMe
+ * @param {string} deviceId
+ * @param {*} deviceInfo
+ * @param {string} [refresh=null]
+ * @returns {Promise<void>}
+ */
+const generateTokens = async (user, rememberMe = false, deviceId = "", deviceInfo = {}, refresh = null) => {
   try {
     const payload = { _id: user._id, deviceId };
 
@@ -12,15 +21,28 @@ const generateTokens = async (user, rememberMe = false, deviceId = "") => {
 
     let refreshToken = null;
 
-    const userToken = await models.UserToken.findOne({
-      userId: user._id,
-      deviceId,
-    });
+    let userToken = null;
+    let isExpired = null;
 
-    if (userToken) {
+    if (refresh) {
+      await models.UserToken.findOneAndDelete({ token: refresh });
+    } else {
+      userToken = await models.UserToken.findOne({
+        userId: user._id,
+        deviceId,
+      }).sort({ _id: -1 });
+
+      isExpired = userToken?.expiresAt < new Date() || null;
+    }
+
+    if (userToken && !isExpired) {
       refreshToken = userToken.token;
     } else {
-      let refreshExpireIn = rememberMe ? "30d" : "7d";
+      let refreshExpireIn = rememberMe ? "30d" : "1d";
+      const expireDuration = rememberMe ? 30 : 1;
+
+      const expiresAt = new Date(Date.now() + expireDuration * 24 * 60 * 60 * 1000);
+
       refreshToken = jwt.sign(payload, REFRESH_TOKEN_SECRET, {
         expiresIn: refreshExpireIn,
       });
@@ -29,6 +51,11 @@ const generateTokens = async (user, rememberMe = false, deviceId = "") => {
         userId: user._id,
         token: refreshToken,
         deviceId,
+        os: deviceInfo?.os ?? null,
+        platform: deviceInfo?.platform ?? null,
+        deviceType: deviceInfo?.deviceType ?? null,
+        browser: deviceInfo?.browser ?? null,
+        expiresAt,
       }).save();
     }
 
