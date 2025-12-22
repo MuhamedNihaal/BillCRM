@@ -1,9 +1,10 @@
 import mongoose from "mongoose";
-import { COLLECTIONS } from "../config.js";
-let Schema = mongoose.Schema;
-import moment from "moment";
 
-let privilegeSchema = new Schema(
+let Schema = mongoose.Schema;
+import COLLECTIONS from "@/config/collections.js";
+import getTimeParam from "@/utils/getTimeParam.js";
+
+let schema = new Schema(
   {
     status: {
       type: Number,
@@ -25,89 +26,87 @@ let privilegeSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: COLLECTIONS.USERS,
     },
-    alloted_main_menus: [
-      {
-        _id: false,
-        id: {
+    alloted_main_menus: {
+      type: [
+        {
           type: Schema.Types.ObjectId,
-          ref: COLLECTIONS.MAIN_MENUS,
+          ref: COLLECTIONS.PRIVILEGES_PERMISSION,
         },
-        module: {
+      ],
+      default: undefined,
+    },
+    alloted_submenus: {
+      type: [
+        {
           type: Schema.Types.ObjectId,
-          ref: COLLECTIONS.MODULES,
+          ref: COLLECTIONS.PRIVILEGES_PERMISSION,
         },
-        create: { type: Boolean },
-        view: { type: Boolean },
-        edit: { type: Boolean },
-        remv: { type: Boolean },
-      },
-    ],
-    alloted_submenus: [
-      {
-        _id: false,
-        id: {
+      ],
+      default: undefined,
+    },
+    alloted_companies: {
+      type: [
+        {
           type: Schema.Types.ObjectId,
-          ref: COLLECTIONS.SUB_MENUS,
+          ref: "company",
         },
-        mainMenu: {
+      ],
+      default: undefined,
+    },
+    alloted_local_bodies: {
+      type: [
+        {
           type: Schema.Types.ObjectId,
-          ref: COLLECTIONS.MAIN_MENUS,
+          ref: "local_body_name",
         },
-        create: { type: Boolean },
-        view: { type: Boolean },
-        edit: { type: Boolean },
-        remv: { type: Boolean },
-      },
-    ],
-    alloted_companies: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "company",
-      },
-    ],
-    alloted_local_bodies: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "local_body_name",
-      },
-    ],
-    alloted_app_menus: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "android_menu",
-      },
-    ],
-    alloted_app_submenus: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "android_submenu",
-      },
-    ],
-    alloted_branches: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "newBranch",
-      },
-    ],
-    alloted_modules: [
-      {
-        _id: false,
-        id: {
+      ],
+      default: undefined,
+    },
+    alloted_app_menus: {
+      type: [
+        {
           type: Schema.Types.ObjectId,
-          ref: COLLECTIONS.MODULES,
+          ref: "android_menu",
         },
-        status: Boolean,
-      },
-    ],
+      ],
+      default: undefined,
+    },
+    alloted_app_submenus: {
+      type: [
+        {
+          type: Schema.Types.ObjectId,
+          ref: "android_submenu",
+        },
+      ],
+      default: undefined,
+    },
+    alloted_branches: {
+      type: [
+        {
+          type: Schema.Types.ObjectId,
+          ref: "newBranch",
+        },
+      ],
+      default: undefined,
+    },
+    alloted_modules: {
+      type: [
+        {
+          type: Schema.Types.ObjectId,
+          ref: COLLECTIONS.PRIVILEGES_PERMISSION,
+        },
+      ],
+      default: undefined,
+    },
     superAdmin: { type: Boolean, default: false },
     parent: { type: Schema.Types.ObjectId, ref: COLLECTIONS.PRIVILEGES },
 
-    date: { type: String, default: () => moment().format("YYYY-MM-DD") },
-    time: { type: String, default: () => moment().format("HH:mm:ss") },
+    date: { type: String, default: () => getTimeParam("date") },
+    time: { type: String, default: () => getTimeParam("timeWithSecond") },
   },
   { timestamps: true, collection: COLLECTIONS.PRIVILEGES }
 );
 
-let Privilege = mongoose.model(COLLECTIONS.PRIVILEGES, privilegeSchema);
+let privilege = mongoose.model(COLLECTIONS.PRIVILEGES, schema);
 
-export default Privilege;
+export default privilege;

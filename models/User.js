@@ -1,16 +1,17 @@
 import { Schema, model } from "mongoose";
 import bcrypt from "bcryptjs";
-import moment from "moment";
 
-import { COLLECTIONS } from "../config.js";
+import * as config from "@/config/security.js";
+import COLLECTIONS from "@/config/collections.js";
+import getTimeParam from "@/utils/getTimeParam.js";
 
 const schema = new Schema(
   {
-    firstName: { type: String },
-    lastName: { type: String },
-    username: { type: String },
-    mobile: { type: String },
-    email: { type: String },
+    firstName: { type: String, trim: true },
+    lastName: { type: String, trim: true },
+    username: { type: String, trim: true },
+    mobile: { type: String, trim: true },
+    email: { type: String, trim: true },
 
     password: { type: String },
     passwordChanged: { type: Boolean, default: false },
@@ -19,19 +20,36 @@ const schema = new Schema(
     image: { type: String, default: "" },
     dob: { type: String },
 
+    signature: { type: Schema.Types.ObjectId, ref: COLLECTIONS.SIGNATURES },
+
     privilege: { type: Schema.Types.ObjectId, ref: COLLECTIONS.PRIVILEGES },
     module: { type: Schema.Types.ObjectId, ref: COLLECTIONS.MODULES },
 
-    type: { type: Number, enum: [1, 2, 3, 4, 5], default: 5 }, // 1- Main Branch, 2- Sub Branch, 3- Franchise, 4- collection center
+    type: {
+      type: Number,
+      enum: [1, 2, 3, 4, 5],
+      required: true,
+      description: "1 - Main Branch , 2 - Sub Branch , 3 - Franchise collection center , 4 - Owned collection center",
+    },
 
     company: { type: Schema.Types.ObjectId, ref: COLLECTIONS.COMPANY },
     branch: { type: Schema.Types.ObjectId, ref: COLLECTIONS.BRANCH },
     subBranch: { type: Schema.Types.ObjectId, ref: COLLECTIONS.BRANCH },
-    franchise: { type: Schema.Types.ObjectId, ref: COLLECTIONS.BRANCH },
+
+    franchise: { type: Schema.Types.ObjectId, ref: COLLECTIONS.COLLECTION_CENTER },
+    collectionCenter: { type: Schema.Types.ObjectId, ref: COLLECTIONS.COLLECTION_CENTER },
+
     department: { type: Schema.Types.ObjectId, ref: COLLECTIONS.DEPARTMENT },
 
-    status: { type: Number, default: 0, enum: [0, 1, 2] }, // 2 is blocked or inactive
-    browserToken: { type: String },
+    status: { type: Number, default: 0, enum: [0, 1, 2], description: "0 - active, 1 - deleted, 2 - blocked or inactive" },
+
+    browserTokens: [
+      {
+        token: { type: String, required: true },
+        lastUsed: { type: Date, default: Date.now },
+        isActive: { type: Boolean, default: true },
+      },
+    ],
 
     login: { date: { type: String }, time: { type: String } },
     statusUpdate: {
@@ -55,19 +73,15 @@ const schema = new Schema(
     addedBy: { type: Schema.Types.ObjectId, ref: COLLECTIONS.USERS },
     updatedBy: { type: Schema.Types.ObjectId, ref: COLLECTIONS.USERS },
 
-    date: { type: String, default: () => moment().format("YYYY-MM-DD") },
-    time: { type: String, default: () => moment().format("HH:mm:ss") },
-
-    upDate: { type: String, default: () => moment().format("YYYY-MM-DD") },
-    upTime: { type: String, default: () => moment().format("HH:mm:ss") },
+    date: { type: String, default: () => getTimeParam("date") },
+    time: { type: String, default: () => getTimeParam("time") },
   },
 
   { timestamps: true, collection: COLLECTIONS.USERS }
 );
 
 schema.methods.generatePasswordHash = (password) => {
-  const saltRounds = 10;
-  const salt = bcrypt.genSaltSync(saltRounds);
+  const salt = bcrypt.genSaltSync(config.BCRYPT_SALT_ROUNDS);
   const hash = bcrypt.hashSync(password, salt);
   return hash;
 };

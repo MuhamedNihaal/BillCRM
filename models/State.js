@@ -1,8 +1,12 @@
-import mongoose, { Schema } from "mongoose";
-import { COLLECTIONS } from "../config.js";
+import mongoose from "mongoose";
 
-let stateSchema = new Schema(
+let Schema = mongoose.Schema;
+import COLLECTIONS from "@/config/collections.js";
+
+const schema = new Schema(
   {
+    status: { type: Number, default: 0, description: "0 - active, 1 - deleted" },
+
     _id: Number,
 
     name: String,
@@ -14,4 +18,5 @@ let stateSchema = new Schema(
   { timestamps: true, collection: COLLECTIONS.STATE }
 );
 
-export default mongoose.model(COLLECTIONS.STATE, stateSchema);
+const index = mongoose.model(COLLECTIONS.STATE, schema);
+export default index;

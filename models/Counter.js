@@ -1,5 +1,7 @@
-import { Schema, model } from "mongoose";
-import { COLLECTIONS } from "../config.js";
+import mongoose from "mongoose";
+let Schema = mongoose.Schema;
+
+import COLLECTIONS from "@/config/collections.js";
 
 const schema = new Schema(
   {
@@ -9,4 +11,5 @@ const schema = new Schema(
   { timestamps: true, collection: COLLECTIONS.COUNTER }
 );
 
-export default model(COLLECTIONS.COUNTER, schema);
+const index = mongoose.model(COLLECTIONS.COUNTER, schema);
+export default index;

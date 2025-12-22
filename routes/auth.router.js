@@ -1,24 +1,29 @@
 import { Router } from "express";
 const router = Router();
-import auth from "../middleware/userAuth.js";
 import rateLimiter from "express-rate-limit";
+import auth from "@/middleware/crmAuth.js";
+import * as controller from "@/controllers/auth.controller.js";
+
 const loginLimiter = rateLimiter({
   windowMs: 10 * 1000, // 10 seconds
-  max: 20,
-  message: "Too many requests, please try again later.",
+  max: 30,
+  message: {
+    success: false,
+    message: "Too many requests, please try again later.",
+  },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-import * as controller from "../controllers/auth.controller.js";
 router.use(loginLimiter);
-router.post("/login", controller.login("web"));
-router.post("/two-step", controller.verifyTwoFactor);
+router.post("/login", controller.login);
+router.post("/mfa/verify", controller.verifyTwoFactor);
 
-router.use(auth({ common: true }));
-router.get("/check-allowed", controller.allowed);
-router.post("/logout", controller.logout);
-router.get("/session", controller.listSessions);
-router.put("/change-password", controller.changePassword);
+router.post("/refresh-token", controller.renewAccessToken);
+
+router.get("/check-allowed", auth({ common: true }), controller.allowed);
+router.post("/logout", auth({ common: true }), controller.logout);
+router.get("/session", auth({ common: true }), controller.listSessions);
+router.put("/change-password", auth({ common: true }), controller.changePassword);
 
 export default router;

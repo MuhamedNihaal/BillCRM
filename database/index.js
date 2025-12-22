@@ -1,25 +1,6 @@
 import chalk from "chalk";
 import mongoose from "mongoose";
-import {
-  ACCESS_TOKEN_SECRET, DATABASE_URL,
-  PROJECT_NAME,REFRESH_TOKEN_SECRET,
-} from "../config.js";
-
-if (!DATABASE_URL) {
-    throw new Error("DATABASE_URL must be defined");
-}
-
-if (!ACCESS_TOKEN_SECRET) {
-  throw new Error("ACCESS_TOKEN_SECRET must be defined");
-}
-
-if (!REFRESH_TOKEN_SECRET) {
-  throw new Error("REFRESH_TOKEN_SECRET must be defined");
-}
-
-if (!PROJECT_NAME) {
-  throw new Error("PROJECT_NAME must be defined");
-}
+import { DATABASE_URL } from "@/config/security.js";
 
 var options = {
   connectTimeoutMS: 30000,

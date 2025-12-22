@@ -1,9 +1,10 @@
 import mongoose from "mongoose";
-let Schema = mongoose.Schema;
-import { COLLECTIONS } from "../config.js";
-import moment from "moment";
 
-let menuSchema = new Schema(
+let Schema = mongoose.Schema;
+import COLLECTIONS from "@/config/collections.js";
+import getTimeParam from "@/utils/getTimeParam.js";
+
+let schema = new Schema(
   {
     ip: {
       type: String,
@@ -11,11 +12,11 @@ let menuSchema = new Schema(
     path: String,
     date: {
       type: String,
-      default: () => moment().format("YYYY-MM-DD"),
+      default: () => getTimeParam("date"),
     },
     time: {
       type: String,
-      default: () => moment().format("HH:mm:ss"),
+      default: () => getTimeParam("timeWithSecond"),
     },
     status: {
       type: Number,
@@ -25,6 +26,9 @@ let menuSchema = new Schema(
       type: Number,
     },
     name: {
+      type: String,
+    },
+    link: {
       type: String,
     },
     icon: {
@@ -44,10 +48,11 @@ let menuSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: COLLECTIONS.MODULES,
     },
+    domains: [String],
   },
   { timestamps: true, collection: COLLECTIONS.MAIN_MENUS }
 );
 
-let MainMenu = mongoose.model(COLLECTIONS.MAIN_MENUS, menuSchema);
+let mainMenu = mongoose.model(COLLECTIONS.MAIN_MENUS, schema);
 
-export default MainMenu;
+export default mainMenu;

@@ -1,20 +1,21 @@
 import mongoose from "mongoose";
-let Schema = mongoose.Schema;
-import { COLLECTIONS } from "../config.js";
-import moment from "moment";
 
-let submenuSchema = new Schema(
+let Schema = mongoose.Schema;
+import COLLECTIONS from "@/config/collections.js";
+import getTimeParam from "@/utils/getTimeParam.js";
+
+let schema = new Schema(
   {
     ip: {
       type: String,
     },
     date: {
       type: String,
-      default: () => moment().format("YYYY-MM-DD"),
+      default: () => getTimeParam("date"),
     },
     time: {
       type: String,
-      default: () => moment().format("HH:mm:ss"),
+      default: () => getTimeParam("timeWithSecond"),
     },
     status: {
       type: Number,
@@ -25,6 +26,9 @@ let submenuSchema = new Schema(
       ref: COLLECTIONS.MAIN_MENUS,
     },
     name: {
+      type: String,
+    },
+    link: {
       type: String,
     },
     icon: {
@@ -41,10 +45,11 @@ let submenuSchema = new Schema(
     order: {
       type: Number,
     },
+    domains: [String],
   },
   { timestamps: true, collection: COLLECTIONS.SUB_MENUS }
 );
 
-let SubMenu = mongoose.model(COLLECTIONS.SUB_MENUS, submenuSchema);
+let SubMenu = mongoose.model(COLLECTIONS.SUB_MENUS, schema);
 
 export default SubMenu;

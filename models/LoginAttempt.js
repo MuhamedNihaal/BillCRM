@@ -1,7 +1,8 @@
 import mongoose from "mongoose";
-import moment from "moment";
-import { COLLECTIONS } from "../config.js";
 let Schema = mongoose.Schema;
+
+import COLLECTIONS from "@/config/collections.js";
+import getTimeParam from "@/utils/getTimeParam.js";
 
 let schema = new Schema(
   {
@@ -13,33 +14,37 @@ let schema = new Schema(
     },
     login_on: {
       type: Date,
-      default: () => moment().format("YYYY-MM-DD HH:mm:ss"),
+      default: () => getTimeParam("dateAndTimeWithSecond"),
     },
     status: {
       type: Number,
-      default: 0, // 0 is active, 2 is blocked
+      default: 0,
+      description: "0 - active, 2 - blocked",
     },
     attempts: {
-      type: Number, // the count of attempts
+      type: Number,
+      description: "the count of attempts",
     },
     date: {
       type: String,
-      default: () => moment().format("YYYY-MM-DD"),
+      default: () => getTimeParam("date"),
     },
     time: {
       type: String,
-      default: () => moment().format("HH:mm:ss"),
+      default: () => getTimeParam("time"),
     },
     password: {
       type: String,
     },
     unblock_at: {
       type: Date,
-      default: null, // Time when user will be unblocked
+      default: null,
+      description: "Time when user will be unblocked",
     },
   },
   { timestamps: true, collection: COLLECTIONS.LOGIN_ATTEMPTS }
 );
-let LoginAttempt = mongoose.model(COLLECTIONS.LOGIN_ATTEMPTS, schema);
 
-export default LoginAttempt;
+let loginAttempt = mongoose.model(COLLECTIONS.LOGIN_ATTEMPTS, schema);
+
+export default loginAttempt;

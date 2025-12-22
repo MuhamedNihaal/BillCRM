@@ -1,19 +1,35 @@
 import { Router } from "express";
-const app = Router();
+const router = Router();
 
-import authRouter from "./routes/auth.router.js";
+import crmAuth from "./middleware/crmAuth.js";
 
-import userRoute from "./routes/user.router.js";
-import privilegeRoute from "./routes/privilege.router.js";
+//! Core Routers
+import authRouter from "@/routes/auth.router.js";
+import securityRouters from "@/routes/security.router.js";
+import privilegeRoute from "@/routes/privilege.router.js";
+import moduleRoute from "@/routes/module.router.js";
+import searchRouter from "@/routes/search.router.js";
 
-import optionsRoute from "./routes/options.router.js";
+//! Finance Routers
+import accountRouter from "@/routes/account.router.js";
 
-app.get("/", (req, res) => res.send("Crm Running 🚀"));
-app.use("/auth", authRouter);
+//!Common Routes
+import userRouter from "@/routes/user.router.js";
+import optionsRouter from "@/routes/options.router.js";
 
-app.use("/user", userRoute);
-app.use("/privilege", privilegeRoute);
+//? common routes
+router.use("/options", crmAuth({ common: true }), optionsRouter);
+router.use("/manage", manageRouter)
 
-app.use("/options", optionsRoute);
+//? finance routers
+router.use("/accounts", accountRouter);
 
-export default app;
+//? core routers
+router.use("/auth", authRouter);
+router.use("/user", userRouter);
+router.use("/privilege", privilegeRoute);
+router.use("/module", moduleRoute);
+router.use("/search", searchRouter);
+router.use(securityRouters);
+
+export default router;

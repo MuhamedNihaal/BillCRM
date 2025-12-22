@@ -1,23 +1,24 @@
 import * as yup from "yup";
-import { dynamicRequire, objectIdRegex } from "./global.validation.js";
+import { Error } from "express-error-catcher";
+import { dynamicRequire, objectIdRegex } from "@/helper/regex.js";
 
 export const ModuleSchema = async (body, required = true) => {
   const schema = yup
     .object({
-      type: dynamicRequire(yup.number().typeError("Type must be number").oneOf([1, 2, 3], "Type must be 1, 2, or 3"), required, "Type is required"),
+      type: dynamicRequire(yup.number().typeError("type must be number").oneOf([1, 2, 3], "type must be 1, 2, or 3"), required, "type is required"),
       id: dynamicRequire(
-        yup.string().typeError("Invalid id format provided").matches(objectIdRegex, "Invalid id format provided"),
+        yup.string().typeError("invalid id format provided").matches(objectIdRegex, "invalid id format provided"),
         required,
-        "Id is required"
+        "id is required"
       ),
       privilegeId: dynamicRequire(
-        yup.string().typeError("Invalid privilege id format provided").matches(objectIdRegex, "Invalid privilege id format provided"),
+        yup.string().typeError("invalid privilege id format provided").matches(objectIdRegex, "invalid privilege id format provided"),
         required,
-        "Privilege is required"
+        "privilege is required"
       ),
-      mainMenu: yup.string().typeError("Invalid main menu id format provided").matches(objectIdRegex, "Invalid main menu id format provided"),
+      mainMenu: yup.string().typeError("invalid main menu id format provided").matches(objectIdRegex, "invalid main menu id format provided"),
 
-      module: yup.string().typeError("Invalid module id format provided").matches(objectIdRegex, "Invalid module id format provided"),
+      module: yup.string().typeError("invalid module id format provided").matches(objectIdRegex, "invalid module id format provided"),
 
       create: yup.boolean().typeError("create must be boolean"),
       view: yup.boolean().typeError("view must be boolean"),
@@ -44,13 +45,7 @@ export const ModuleSchema = async (body, required = true) => {
     .noUnknown();
 
   try {
-    let obj = { ...body };
-
-    if (obj.type) {
-      obj.type = Number(body?.type);
-    }
-
-    return await schema.validate(obj, { abortEarly: false });
+    return await schema.validate({ ...body, type: Number(body?.type) }, { abortEarly: false });
   } catch (err) {
     return { error: err.errors[0] ?? err?.message };
   }
@@ -62,15 +57,17 @@ export const ruleSchema = async (body) => {
       // 1 module enable or disable
       // 2 menu enable or disable
       // 3 sub menu enable or disable
+      // 4 enable all
 
-      type: yup.number().typeError("Type must be number").oneOf([1, 2, 3], "Type must be 1, 2 or 3").required("Type is required"),
+      type: yup.number().typeError("Type must be number").oneOf([1, 2, 3, 4], "Type must be 1, 2, 3 or 4").required("Type is required"),
       privilegeId: yup.string().typeError("Privilege must be string").matches(objectIdRegex, "Invalid privilege").required("Privilege is required"),
 
       moduleId: yup.string().typeError("Module must be string").matches(objectIdRegex, "Invalid module"),
       menuId: yup.string().typeError("Menu must be string").matches(objectIdRegex, "Invalid menu"),
       subMenuId: yup.string().typeError("Sub Menu must be string").matches(objectIdRegex, "Invalid sub menu"),
 
-      status: yup.boolean().typeError("Status must be boolean"), // module status
+      enabled: yup.boolean().typeError("Status must be boolean").default(true),
+      status: yup.boolean().typeError("Status must be boolean"),
       view: yup.boolean().typeError("View must be boolean"),
       create: yup.boolean().typeError("Create must be boolean"),
       edit: yup.boolean().typeError("Edit must be boolean"),
@@ -88,6 +85,7 @@ export const ruleSchema = async (body) => {
           remv: yup.boolean().typeError("Delete must be boolean").required("Delete is required"),
         })
       ),
+      fullEnable: yup.bool().default(false),
     })
     .test("condition-validation", "Invalid fields for given type", (values) => {
       const { type, moduleId, menuId, subMenuId, status, view, create, edit, remv } = values;
@@ -134,7 +132,6 @@ export const ruleSchema = async (body) => {
 
       return true;
     })
-    .strict()
     .noUnknown();
 
   try {
@@ -144,9 +141,9 @@ export const ruleSchema = async (body) => {
       obj.type = Number(obj.type);
     }
 
-    let data = await schema.validate(obj, { abortEarly: false });
+    let data = await schema.validate(obj, { abortEarly: false, stripUnknown: false });
 
-    if (data.type === 1) {
+    if (data.type === 1 || data.type === 4) {
       data.id = data.moduleId;
     }
 
@@ -162,6 +159,7 @@ export const ruleSchema = async (body) => {
 
     return data;
   } catch (err) {
-    return { error: err.errors[0] ?? err?.message };
+    let message = Array.isArray(err.errors) ? err.errors[0] : err.message;
+    throw new Error(message, 400);
   }
 };

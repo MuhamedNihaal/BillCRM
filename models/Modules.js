@@ -1,9 +1,10 @@
 import mongoose from "mongoose";
-import { COLLECTIONS } from "../config.js";
-let Schema = mongoose.Schema;
-import moment from "moment";
 
-let modulesSchema = new Schema(
+let Schema = mongoose.Schema;
+import COLLECTIONS from "@/config/collections.js";
+import getTimeParam from "@/utils/getTimeParam.js";
+
+let schema = new Schema(
   {
     name: {
       type: String,
@@ -33,11 +34,11 @@ let modulesSchema = new Schema(
     },
     date: {
       type: String,
-      default: () => moment().format("YYYY-MM-DD"),
+      default: () => getTimeParam("date"),
     },
     time: {
       type: String,
-      default: () => moment().format("HH:mm:ss"),
+      default: () => getTimeParam("timeWithSecond"),
     },
     upDate: {
       type: String,
@@ -52,10 +53,11 @@ let modulesSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    domains: [String],
   },
   { timestamps: true, collection: COLLECTIONS.MODULES }
 );
 
-let modules = mongoose.model(COLLECTIONS.MODULES, modulesSchema);
+let modules = mongoose.model(COLLECTIONS.MODULES, schema);
 
 export default modules;

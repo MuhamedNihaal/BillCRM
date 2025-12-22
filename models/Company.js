@@ -1,30 +1,31 @@
-import { Schema, model } from "mongoose";
-import { COLLECTIONS } from "../config.js";
+import mongoose from "mongoose";
+
+let Schema = mongoose.Schema;
+import COLLECTIONS from "@/config/collections.js";
+import commonFields from "@/utils/commonFields.js";
 
 const schema = new Schema(
   {
+    status: { type: Number, default: 0, description: "0 - active, 1 - deleted, 2 - inactive" },
+
     name: String,
     uniqueId: String,
     mobile: String,
+    landline: String,
     email: String,
     logo: String,
     website: String,
     contactPerson: String,
     designation: String,
     address: String,
+
     state: { type: Number, ref: COLLECTIONS.STATE },
     district: { type: Schema.Types.ObjectId, ref: COLLECTIONS.DISTRICT },
 
-    status: { type: Number, enum: [0, 1, 2], default: 0 },  // 0- Active, 1- Deleted, 2- Inactive
-    
-    date: { type: String, default: () => moment().format("YYYY-MM-DD") },
-    time: { type: String, default: () => moment().format("HH:mm:ss") },
-    upTime: String,
-    upDate: String,
-    addedBy: { type: Schema.Types.ObjectId, ref: COLLECTIONS.USERS },
-    updatedBy: { type: Schema.Types.ObjectId, ref: COLLECTIONS.USERS }
+    ...commonFields,
   },
   { timestamps: true, collection: COLLECTIONS.COMPANY }
-)
+);
 
-export default model(COLLECTIONS.COMPANY, schema);
+const index = mongoose.model(COLLECTIONS.COMPANY, schema);
+export default index;

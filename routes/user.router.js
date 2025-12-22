@@ -1,19 +1,38 @@
 import { Router } from "express";
 const router = Router();
-import { multerUpload } from "../helper/functions.js";
-import auth from "../middleware/userAuth.js";
 
+//! Local Imports
+import auth from "@/middleware/crmAuth.js";
 import * as controller from "../controllers/user.controller.js";
+import { fileFilter, multerUpload } from "@/helper/index.js";
 
-const profileImage = multerUpload("profile", ["image"]);
+const profileImageUpload = multerUpload({
+  folder: "profile",
+  filter: fileFilter([".png", ".jpg", ".jpeg"]),
+  required: true,
+  requiredMsg: "Profile image is required",
+  limits: { fileSize: 2 * 1024 * 1024 },
+});
 
-router.use(auth({ common: true }));
-router.get("/activity", controller.listUserActivityLog);
-router.post("/image", profileImage.single("file"), controller.uploadImage);
-router.put("/", controller.updateUser);
-router.get("/", controller.getUserInfo);
+//? User Routes
+router.get("/activity", auth({ common: true }), controller.listUserActivityLog);
+router.post("/image", auth({ common: true }), profileImageUpload.single("file"), controller.uploadProfileImage);
+router.put("/basic", auth({ common: true }), controller.basicData);
 
-router.use(auth({ master: true }));
-router.post("/", controller.addUser);
-router.get("/list", controller.listUser)
+router.get("/", auth({ common: true }), controller.getUserInfo);
+router.put("/", auth({ common: true }), controller.updateUser);
+router.delete("/", auth({ common: true }), controller.deleteUser);
+
+router.post("/browser/token", auth({ common: true }), controller.userBrowserToken);
+router.get("/browser/token", auth({ common: true }), controller.getUserBrowserToken);
+
+router.get("/details/:id", auth({ common: true }), controller.userDetails);
+router.put("/mfa/setup", auth({ common: true }), controller.setupMFA);
+
+//? Master Routes
+router.post("/", auth({ master: true }), controller.addUser);
+router.get("/list", auth({ master: true }), controller.listUser);
+router.put("/status", auth({ master: true }), controller.userActiveInactive);
+router.put("/password", auth({ master: true }), controller.changePassword);
+router.put("/privilege", auth({ master: true }), controller.updatePrivilege);
 export default router;

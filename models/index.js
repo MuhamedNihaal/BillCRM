@@ -1,42 +1,77 @@
-import OtpMessage from "./Otp.js";
-import Customer from "./Customer.js";
-import CustomerAppToken from "./CustomerAppToken.js";
-import CustomerWebToken from "./CustomerWebToken.js";
+//! Core Models
+import UserActivity from "./userActivity.js";
+import User from "./user.js";
+import LoginAttempt from "./loginAttempt.js";
+import UserTokens from "./userTokens.js";
+import PrivilegePermission from "./privilegePermission.js";
+import Privilege from "./privilege.js";
+import Modules from "./modules.js";
+import MainMenu from "./mainMenu.js";
+import SubMenu from "./subMenu.js";
+import Company from "./company.js";
+import Branch from "./branch.js";
+import CollectionCenter from "./collectionCenter.js";
+import Department from "./department.js";
 
-import User from "./User.js";
-import LoginAttempt from "./LoginAttempt.js";
-import UserActivity from "./UserActivity.js";
-import UserToken from "./UserToken.js";
-import Privilege from "./Privilege.js";
-import Modules from "./Modules.js";
-import MainMenu from "./MainMenu.js";
-import SubMenu from "./SubMenu.js";
+//? Finance Models
+import AccountHead from "./accountHead.js";
+import AccountSubHead from "./accountSubHead.js";
+import ChartOfAccount from "./chartOfAccount.js";
 
-import Counter from "./Counter.js";
-import Company from "./Company.js";
-import Branch from "./Branch.js";
-import District from "./District.js";
+//? Common Models
+import Counter from "./counter.js";
+import Country from "./country.js";
 import State from "./State.js";
+import District from "./districts.js";
+
+
+//? Main Models
+import Billing from "./billing.js";
+import Corporative from "./corporative.js";
 
 export default {
-  OtpMessage,
-  Customer,
-  CustomerAppToken,
-  CustomerWebToken,
-
-  User,
-  Company,
-  Branch,
-  District,
-  State,
-
+  //? Core Models
   LoginAttempt,
+  User,
   UserActivity,
-  UserToken,
-
+  UserTokens,
+  PrivilegePermission,
   Privilege,
   Modules,
   MainMenu,
   SubMenu,
+  Company,
+  Branch,
+  CollectionCenter,
+  Department,
+
+  //? Finance
+  AccountHead,
+  AccountSubHead,
+  ChartOfAccount,
+
+  //? Common
   Counter,
+  Country,
+  State,
+  District,
+
+  Test: {},
+
+  Units: {},
+  Methods: {},
+  Antibiotics: {},
+  AnalysisType: {},
+  ConsumableCategory: {},
+  Consumable: {},
+  RangeType: {},
+  Sample: {},
+  SampleData: {},
+  Remarks: {},
+
+  //? Master Settings
+  Corporative,
+
+  //? Billing
+  Billing,
 };

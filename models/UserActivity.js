@@ -1,8 +1,10 @@
 import mongoose from "mongoose";
-import { COLLECTIONS } from "../config.js";
-let Schema = mongoose.Schema;
-import moment from "moment";
-let userActivitySchema = new Schema(
+import COLLECTIONS from "@/config/collections.js";
+import getTimeParam from "@/utils/getTimeParam.js";
+
+const { Schema } = mongoose;
+
+const schema = new Schema(
   {
     ip: {
       type: Schema.Types.String,
@@ -12,33 +14,38 @@ let userActivitySchema = new Schema(
     },
     show: {
       type: Boolean,
-      default: true, // false will hide from user profile
+      default: false,
+      description: "Whether to show this activity in user logs, [ false will hide from user profile ]",
     },
-    date: {
-      type: String,
-      default: () => moment().format("YYYY-MM-DD"),
+    reference: {
+      type: Schema.Types.Mixed,
     },
-    time: {
-      type: String,
-      default: () => moment().format("HH:mm:ss"),
-    },
-    userId: {
+    changedBy: {
       type: Schema.Types.ObjectId,
       ref: COLLECTIONS.USERS,
     },
     user: {
-      type: Schema.Types.String, // firstName or username
+      type: Schema.Types.ObjectId,
+      ref: COLLECTIONS.USERS,
     },
     description: {
       type: Schema.Types.String,
+    },
+
+    deviceId: String,
+
+    date: {
+      type: String,
+      default: () => getTimeParam("date"),
+    },
+    time: {
+      type: String,
+      default: () => getTimeParam("time"),
     },
   },
   { timestamps: true, collection: COLLECTIONS.USER_ACTIVITY_LOGS }
 );
 
-let userActivity = mongoose.model(
-  COLLECTIONS.USER_ACTIVITY_LOGS,
-  userActivitySchema
-);
+const userActivity = mongoose.model(COLLECTIONS.USER_ACTIVITY_LOGS, schema);
 
 export default userActivity;
