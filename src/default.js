@@ -1,0 +1,5 @@
+export const LEAD_STATUS = {
+  NEW: "62c7d6597333e58969b3de08",
+  NOT_INTERESTED: "6927f157c32f94b58667d6af",
+  LOST: "68ec85ec032dbfeb995a055a",
+};

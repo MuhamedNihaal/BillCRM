@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg
+    className="size-6"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="#6B7280"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+>
+    <line x1="12" y1="2" x2="12" y2="12" />
+    <path d="M5.5 6a9 9 0 1 0 13 0" />
+</svg>
