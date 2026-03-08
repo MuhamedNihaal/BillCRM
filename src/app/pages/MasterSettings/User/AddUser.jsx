@@ -20,10 +20,10 @@ const AddUser = ({ data, setRefresh, setData }) => {
 
   useEffect(() => {
     GET_OPTIONS(setSelectOptions, { privilege: true }, "privilege");
-    GET_OPTIONS(setSelectOptions, { signature: true }, "signature");
-    GET_OPTIONS(setSelectOptions, { company: true }, "company");
+    // GET_OPTIONS(setSelectOptions, { signature: true }, "signature");
+    // GET_OPTIONS(setSelectOptions, { company: true }, "company");
     GET_OPTIONS(setSelectOptions, { module: true }, "module");
-    GET_OPTIONS(setSelectOptions, { department: true }, "department");
+    // GET_OPTIONS(setSelectOptions, { department: true }, "department");
   }, []);
 
   const {

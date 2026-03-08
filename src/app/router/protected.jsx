@@ -43,9 +43,7 @@ const protectedRoutes = {
                   path: "blocked-ips",
                   lazy: async () => ({
                     Component: (
-                      await import(
-                        "app/pages/MasterSettings/Security/BlockedIp"
-                      )
+                      await import("app/pages/MasterSettings/Security/BlockedIp")
                     ).default,
                   }),
                 },
@@ -53,9 +51,7 @@ const protectedRoutes = {
                   path: "activity-log",
                   lazy: async () => ({
                     Component: (
-                      await import(
-                        "app/pages/MasterSettings/Security/ActivityLog"
-                      )
+                      await import("app/pages/MasterSettings/Security/ActivityLog")
                     ).default,
                   }),
                 },
@@ -82,6 +78,40 @@ const protectedRoutes = {
               lazy: async () => ({
                 Component: (await import("app/pages/MasterSettings/Rules"))
                   .default,
+              }),
+            },
+          ],
+        },
+        // ===========> Inventory Module Routes <============
+        {
+          path: "/inventory",
+          children: [
+            // ===========> Purchase Menus <============
+            {
+              path: "purchase",
+              // element: <TitlePage title={"Purchase"} />,
+              lazy: async () => ({
+                Component: (
+                  await import("app/pages/Inventory/Purchase/AddPurchase/AddPurchase")
+                ).default,
+              }),
+            },
+            // ===========> Suppliers Menus <============
+            {
+              path: "supplier",
+              lazy: async () => ({
+                Component: (
+                  await import("app/pages/Inventory/Supplier/Suppliers")
+                ).default,
+              }),
+            },
+            // ===========> Products Menus <============
+            {
+              path: "product",
+              lazy: async () => ({
+                Component: (
+                  await import("app/pages/Inventory/Product/Products")
+                ).default,
               }),
             },
           ],
