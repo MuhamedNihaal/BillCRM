@@ -12,6 +12,7 @@ import nocache from "nocache";
 import session from "express-session";
 import { fileURLToPath } from "url";
 import { error } from "express-error-catcher";
+import dns from "dns";
 
 //! config
 const __filename = fileURLToPath(import.meta.url);
@@ -37,6 +38,7 @@ import tokenSetter from "./middleware/tokenSetter.js";
 import deviceIdSetter from "./middleware/deviceIdSetter.js";
 
 //! =============> start middleware
+dns.setDefaultResultOrder('ipv4first');
 app.use(cookieParser());
 app.use(hpp()); // Prevent HTTP parameter pollution
 app.use(nocache());

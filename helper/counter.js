@@ -18,7 +18,13 @@ class Counter {
    *
    * @throws {Error} If `counterId` is missing.
    */
-  constructor({ counterId, req, isAdmin = false, isCommon = false, isSave = true }) {
+  constructor({
+    counterId,
+    req,
+    isAdmin = false,
+    isCommon = false,
+    isSave = true,
+  }) {
     if (!counterId) throw new Error("Counter ID is required");
 
     this.#id = counterId;
@@ -37,7 +43,8 @@ class Counter {
    */
   async init(defaultValue = 0) {
     const doc =
-      (await this.#CounterModel.findOne({ _id: this.#id }).lean()) || (await this.#CounterModel.create({ _id: this.#id, value: defaultValue }));
+      (await this.#CounterModel.findOne({ _id: this.#id }).lean()) ||
+      (await this.#CounterModel.create({ _id: this.#id, value: defaultValue }));
 
     return Number(doc.value);
   }
@@ -71,13 +78,21 @@ class Counter {
    * await counter.save(); // Required to persist the generated ID
    * // Result: "INV25042000001"
    */
-  async uniqueId({ prefix, identifier = this.#identifier, pad = 5 }) {
+  async uniqueId(
+    { prefix, identifier = this.#identifier, pad = 5 },
+    config = {},
+  ) {
     if (!prefix) throw new Error("Prefix is required for uniqueId");
 
     let nextValue;
 
     if (this.#isSave) {
-      let doc = await this.#CounterModel.findOneAndUpdate({ _id: this.#id }, { $inc: { value: 1 } }, { new: true, upsert: true });
+      let doc = await this.#CounterModel.findOneAndUpdate(
+        { _id: this.#id },
+        { $inc: { value: 1 } },
+        { new: true, upsert: true },
+        config,
+      );
 
       nextValue = Number(doc.value);
     } else {
@@ -97,7 +112,11 @@ class Counter {
    */
   async save() {
     if (this.#isSave) return;
-    return this.#CounterModel.findOneAndUpdate({ _id: this.#id }, { $inc: { value: 1 } }, { new: true, upsert: true });
+    return this.#CounterModel.findOneAndUpdate(
+      { _id: this.#id },
+      { $inc: { value: 1 } },
+      { new: true, upsert: true },
+    );
   }
 
   /**
@@ -120,11 +139,19 @@ class Counter {
    * //    "TRX25042000003"
    * // ]
    */
-  async batchUniqueId({ prefix, count = 1, identifier = this.#identifier, pad = 5 }) {
+  async batchUniqueId(
+    { prefix, count = 1, identifier = this.#identifier, pad = 5 },
+    config = {},
+  ) {
     if (!prefix) throw new Error("Prefix is required for batchUniqueId");
     if (count < 1) throw new Error("Count must be >= 1");
 
-    const updated = await this.#CounterModel.findOneAndUpdate({ _id: this.#id }, { $inc: { value: count } }, { new: true, upsert: true });
+    const updated = await this.#CounterModel.findOneAndUpdate(
+      { _id: this.#id },
+      { $inc: { value: count } },
+      { new: true, upsert: true },
+      config,
+    );
 
     const end = Number(updated.value);
     const start = end - count + 1;
@@ -132,7 +159,9 @@ class Counter {
     const ids = [];
 
     for (let i = 0; i < count; i++) {
-      ids.push(`${prefix}${identifier}${(start + i).toString().padStart(pad, "0")}`);
+      ids.push(
+        `${prefix}${identifier}${(start + i).toString().padStart(pad, "0")}`,
+      );
     }
 
     return ids;

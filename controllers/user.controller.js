@@ -345,7 +345,7 @@ export const listUser = asyncErrorHandler(async (req) => {
     .populate("privilege", OPTIONS_FIELD)
     .populate("company", OPTIONS_FIELD)
     .populate("branch", OPTIONS_FIELD)
-    .populate("collectionCenter", OPTIONS_FIELD)
+    // .populate("collectionCenter", OPTIONS_FIELD)
     .sort(sortBy)
     .select("-password -createdAt -updatedAt -__v")
     .skip(skip)

@@ -4,6 +4,7 @@ import { DATABASE_URL } from "@/config/security.js";
 
 var options = {
   connectTimeoutMS: 30000,
+  family: 4,    
 };
 
 const connectDB = () => {

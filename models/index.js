@@ -17,6 +17,11 @@ import Country from "./country.js";
 import State from "./State.js";
 import District from "./districts.js";
 
+//Regular Models
+import Product from "./Product.js";
+import Supplier from "./Supplier.js";
+import Purchase from "./purchase.js";
+
 export default {
   //? Core Models
   LoginAttempt,
@@ -36,4 +41,9 @@ export default {
   Country,
   State,
   District,
+
+  //Regular
+  Product,
+  Supplier,
+  Purchase
 };

@@ -10,16 +10,22 @@ import privilegeRoute from "@/routes/privilege.router.js";
 import moduleRoute from "@/routes/module.router.js";
 import searchRouter from "@/routes/search.router.js";
 
-//! Finance Routers
+//!Purchase Routes
+import productRoute from "./routes/product.router.js";
+import supplierRoute from "./routes/supplier.router.js";
+import purchaseRouter from "./routes/purchase.router.js";
 
 //!Common Routes
 import userRouter from "@/routes/user.router.js";
 import optionsRouter from "@/routes/options.router.js";
 
+//? purchase routers
+router.use("/supplier", supplierRoute);
+router.use("/product", productRoute);
+router.use("/purchase", purchaseRouter);
+
 //? common routes
 router.use("/options", crmAuth({ common: true }), optionsRouter);
-
-//? finance routers
 
 //? core routers
 router.use("/auth", authRouter);

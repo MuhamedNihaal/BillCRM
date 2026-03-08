@@ -1,20 +1,40 @@
-const COLLECTIONS = {
+export const PORT = process.env.PORT || 4000;
+export const PROJECT_NAME = process.env.PROJECT_NAME;
+export const SHORT_CODE = process.env.SHORT_CODE;
+export const DATABASE_URL = process.env.DATABASE_URL;
+export const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET;
+export const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
+export const MEDIA_TOKEN = process.env.MEDIA_TOKEN_SECRET ?? null;
+export const MEDIA_TOKEN_EXPIRE = process.env.MEDIA_TOKEN_EXPIRE ?? "10m";
+export const MEDIA_URL = process.env.MEDIA_URL ?? null;
+export const AUTH_OTP_MESSAGE = process.env.AUTH_OTP_MESSAGE ?? null;
+export const BODY_SIZE_LIMIT = process.env.BODY_SIZE_LIMIT ?? "1mb";
+export const OTP_SECRET_KEY = process.env.OTP_SECRET_KEY ?? "f2145997f29de";
+export const ACCESS_TOKEN_JWT_EXPIRE = process.env.ACCESS_TOKEN_JWT_EXPIRE ?? "15m";
+export const ACCESS_TOKEN_RES_EXPIRE = process.env.ACCESS_TOKEN_RES_EXPIRE ?? 900000;
+export const REFRESH_TOKEN_RES_EXPIRE = process.env.REFRESH_TOKEN_RES_EXPIRE ?? 2592000000;
+export const SECRET_KEY = process.env.SECRET_KEY;
+export const SECRET_IV = process.env.SECRET_IV;
+export const RUN_CRON_JOBS = process.env.RUN_CRON_JOBS === "true";
+
+export const IS_RUN_RABBITMQ = process.env.RABBITMQ === "true";
+export const RABBITMQ_URL = process.env.RABBITMQ_URL ?? "amqp://localhost:5672";
+
+export const PRODUCTION = process.env.PRODUCTION === "true";
+
+export const COLLECTIONS = {
   //=====> Bill Related Collections
   DISCOUNT_REQUEST: "discount_requests",
   BILLING: "billing",
   BILLING_TESTS: "billing_tests",
-  BILLED_TEST_RECORDS: "billed_test_records",
-  BILLED_TEST_RECORD_LOG: "billed_test_record_logs",
+  BILLED_TEST_RECORDS: "BilledTestRecords",
+  BILLED_TEST_RECORD_LOG: "billedTestRecordLogs",
   // End Bill Related Collections
-
-  EXTERNAL_REPORT: "external_report",
 
   //=====> Customer Related Collections
   CUSTOMER: "Customer",
   PROFILE: "Profile",
   RELATION: "Relation",
-
-  MESSAGE_LOG: "message_logs",
 
   COLLECTION_REQUEST: "CollectionRequest",
   OTPMESSAGE: "OtpMessage",
@@ -22,30 +42,28 @@ const COLLECTIONS = {
   CUSTOMERWEBTOKEN: "CustomerWebToken",
 
   //=====> Master & Security Collections
-  USER_TOKEN: "user_tokens",
+  USER_TOKEN: "userTokens",
   LOGIN_ATTEMPTS: "login_attempts",
   USERS: "users",
   PRIVILEGES: "privileges",
   USER_ACTIVITY_LOGS: "user_activity_logs",
-
+  GALLERY: "galleries",
   //-> Menus and Modules
   MODULES: "modules",
   MAIN_MENUS: "mainMenus",
   SUB_MENUS: "subMenus",
-  PRIVILEGES_PERMISSION: "privileges_permissions",
   // USER: "User",
 
   // Other Collections
   COUNTER: "counter",
   DOCTORS: "doctors",
-  CORPORATE: "corporate",
+  CORPORATE: "corporates",
   HOSPITAL: "hospitals",
   LAB: "labs",
   OUT_SOURCE_LAB: "out_source_lab",
-
   BRANCH: "branches",
   COMPANY: "company",
-  COLLECTION_CENTER: "collection_centers",
+  COLLECTION_CENTER: "collectionCenters",
   // End Other Collections
 
   //=====> Test Catalog
@@ -61,16 +79,17 @@ const COLLECTIONS = {
   ANALYSIS_TYPE: "analysis_types",
   CONSUMABLE: "consumables",
   CONSUMABLE_CATEGORY: "consumable_categories",
-  RANGE_TYPE: "range_types",
+  RANGE_TYPE: "range-types",
   SAMPLE: "sample",
   DEPARTMENT: "department",
   SAMPLE_DATA: "sample_data",
   RANGE_TYPE: "range_types",
   ORGAN: "organ",
   REMARKS: "remarks",
-  HEALTH_RISK: "healthRisk",
-  HEALTH_PACKAGE: "healthpackage",
-  HEALTH_CONDITION: "healthCondition",
+  HEALTHRISK: "healthRisk",
+  HEALTHPACKAGE: "healthpackage",
+  HEALTHCONDITION: "healthCondition",
+  FAQ: "faq",
   // End Manage Related Collections
 
   // Options Only Collections
@@ -91,8 +110,7 @@ const COLLECTIONS = {
   CREDITS: "credits",
   CREDIT_NOTE: "creditNotes",
   PAYMENTS: "payments",
-  WALLET_COLLECTION: "wallet_collection",
-  OUTSTANDING_BILLS_LOG: "outstanding_bill_logs",
+  WALLET_COLLECTION: "walletCollection",
   // End Finance Related Collections
 
   OFFER_CODE: "offerCode",
@@ -107,7 +125,6 @@ const COLLECTIONS = {
   PURCHASE_REQUEST: "purchaseRequest",
   STOCK: "stock",
   STOCK_LOG: "stockLogs",
-  STOCK_USAGE: "stockUsage",
   // Inventory Related Collections'
 
   NOTIFICATION: "notification",
@@ -116,23 +133,13 @@ const COLLECTIONS = {
   LEAD: "leads",
   LEAD_FOLLOUP: "lead_followups",
   APPOINTMENT: "appointments",
+  CAREERS: "careers",
+  BLOG: "blog",
+  TESTIMONIAL: "testimonial",
   CART: "cart",
   ORDERS: "orders",
   PAYMENT_SESSION: "paymentSession",
   DISCOUNT: "discount",
   BOOKINGLOCK: "booking_lock",
-
-  //? Website
-  BLOG: "blog",
-  CAREERS: "careers",
-  TESTIMONIAL: "testimonial",
-  GALLERY: "galleries",
-  CONTACT_INQUIRY: "contact_inquiry",
-  FAQ: "faq",
-  CONTACT: "contact",
-
-  SETTLEMENT_LOG: "settlementLog",
+  PAYMENT: "payment",
 };
-
-export { COLLECTIONS };
-export default COLLECTIONS;
